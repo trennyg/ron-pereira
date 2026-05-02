@@ -17,11 +17,10 @@ export default function Loader({ onComplete }: LoaderProps) {
 
   useEffect(() => {
     const t1 = setTimeout(() => setCurtainOpen(true),  80)
-    const t2 = setTimeout(() => setNameVisible(true),  950)
-    const t3 = setTimeout(() => setSpotlightOn(true),  1050)
-
-    // Animate progress
-    const t4 = setTimeout(() => {
+    const t2 = setTimeout(() => {
+      setNameVisible(true)
+      setSpotlightOn(true)
+      // Start progress immediately with name
       const start = performance.now()
       const dur = 1500
       const tick = (now: number) => {
@@ -30,13 +29,12 @@ export default function Loader({ onComplete }: LoaderProps) {
         if (p < 1) requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
-    }, 1050)
-
+    }, 1000)
     // Fade bg, keep name — name flies to hero
     const t5 = setTimeout(() => { setBgFade(true); onComplete() }, 2800)
     // After fly completes, remove loader
     const t6 = setTimeout(() => setDone(true), 3600)
-    return () => { clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);clearTimeout(t4);clearTimeout(t5);clearTimeout(t6) }
+    return () => { clearTimeout(t1);clearTimeout(t2);clearTimeout(t5);clearTimeout(t6) }
   }, [onComplete])
 
   if (done) return null
@@ -68,10 +66,9 @@ export default function Loader({ onComplete }: LoaderProps) {
             style={{ left:`${p}%`, width:i%2===0?'7%':'3%',
               background:i%2===0?'linear-gradient(90deg,rgba(0,0,0,0.5),rgba(180,60,100,0.08),rgba(0,0,0,0.4))':'linear-gradient(90deg,rgba(200,80,120,0.12),rgba(0,0,0,0))' }} />
         ))}
-        <div className="absolute right-0 top-0 bottom-0 w-[3px]"
+        {/* Gold on OUTER (left) edge only — not the inner edge that drags across screen */}
+        <div className="absolute left-0 top-0 bottom-0 w-[3px]"
           style={{ background:'linear-gradient(180deg,transparent 3%,#F0D080 15%,#C9A84C 40%,#F8E090 60%,#C9A84C 85%,transparent 97%)' }} />
-        <div className="absolute right-[7px] top-0 bottom-0 w-px opacity-35"
-          style={{ background:'linear-gradient(180deg,transparent,rgba(240,208,128,0.6) 20%,rgba(240,208,128,0.6) 80%,transparent)' }} />
         <div className="absolute bottom-0 left-0 right-0 h-5" style={{ background:'linear-gradient(180deg,transparent,rgba(0,0,0,0.7))' }} />
       </motion.div>
 
@@ -87,10 +84,9 @@ export default function Loader({ onComplete }: LoaderProps) {
             style={{ left:`${p}%`, width:i%2===0?'7%':'3%',
               background:i%2===0?'linear-gradient(90deg,rgba(0,0,0,0.5),rgba(180,60,100,0.08),rgba(0,0,0,0.4))':'linear-gradient(90deg,rgba(200,80,120,0.12),rgba(0,0,0,0))' }} />
         ))}
-        <div className="absolute left-0 top-0 bottom-0 w-[3px]"
+        {/* Gold on OUTER (right) edge only */}
+        <div className="absolute right-0 top-0 bottom-0 w-[3px]"
           style={{ background:'linear-gradient(180deg,transparent 3%,#F0D080 15%,#C9A84C 40%,#F8E090 60%,#C9A84C 85%,transparent 97%)' }} />
-        <div className="absolute left-[7px] top-0 bottom-0 w-px opacity-35"
-          style={{ background:'linear-gradient(180deg,transparent,rgba(240,208,128,0.6) 20%,rgba(240,208,128,0.6) 80%,transparent)' }} />
         <div className="absolute bottom-0 left-0 right-0 h-5" style={{ background:'linear-gradient(180deg,transparent,rgba(0,0,0,0.7))' }} />
       </motion.div>
 
@@ -127,9 +123,9 @@ export default function Loader({ onComplete }: LoaderProps) {
             <motion.div
               className="font-[var(--font-cinzel)] font-black text-center"
               style={{ fontSize:'clamp(0.85rem,3.5vw,1.75rem)', letterSpacing:'0.45em', textIndent:'0.45em', lineHeight:1.15, whiteSpace:'nowrap' }}
-              animate={{ opacity: bgFade ? 1 : spotlightOn ? progress : 0.08 }}
+              animate={{ opacity: bgFade ? 1 : spotlightOn ? progress : 0 }}
               initial={{ opacity: 0 }}
-              transition={{ duration: spotlightOn ? 0.05 : 0.6 }}
+              transition={{ duration: 0.05 }}
             >
               <span style={{ color:'var(--cream)' }}>RON </span>
               <span className="gold-shimmer">PEREIRA</span>
