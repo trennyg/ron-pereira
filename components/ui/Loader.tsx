@@ -94,10 +94,11 @@ export default function Loader({ onComplete }: LoaderProps) {
         <div className="absolute bottom-0 left-0 right-0 h-5" style={{ background:'linear-gradient(180deg,transparent,rgba(0,0,0,0.7))' }} />
       </motion.div>
 
-      {/* SPOTLIGHT — fades in with progress */}
+      {/* SPOTLIGHT — starts black, brightens with progress */}
       <motion.div className="absolute inset-0 z-10 pointer-events-none"
+        initial={{ opacity: 0 }}
         animate={{ opacity: bgFade ? 0 : spotlightOn ? progress : 0 }}
-        transition={{ duration: bgFade ? 0.4 : 0.1 }}>
+        transition={{ duration: bgFade ? 0.4 : 0.05 }}>
         <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"
           style={{ position:'absolute', inset:0 }}>
           <defs>
@@ -126,7 +127,9 @@ export default function Loader({ onComplete }: LoaderProps) {
             <motion.div
               className="font-[var(--font-cinzel)] font-black text-center"
               style={{ fontSize:'clamp(0.85rem,3.5vw,1.75rem)', letterSpacing:'0.45em', textIndent:'0.45em', lineHeight:1.15, whiteSpace:'nowrap' }}
-              animate={{ opacity: spotlightOn ? Math.max(progress, 0.15) : 0.12 }}
+              animate={{ opacity: bgFade ? 1 : spotlightOn ? progress : 0.08 }}
+              initial={{ opacity: 0 }}
+              transition={{ duration: spotlightOn ? 0.05 : 0.6 }}
               transition={{ duration:0.1 }}
             >
               <span style={{ color:'var(--cream)' }}>RON </span>
