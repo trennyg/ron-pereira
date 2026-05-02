@@ -130,7 +130,6 @@ export default function Loader({ onComplete }: LoaderProps) {
               animate={{ opacity: bgFade ? 1 : spotlightOn ? progress : 0.08 }}
               initial={{ opacity: 0 }}
               transition={{ duration: spotlightOn ? 0.05 : 0.6 }}
-              transition={{ duration:0.1 }}
             >
               <span style={{ color:'var(--cream)' }}>RON </span>
               <span className="gold-shimmer">PEREIRA</span>
