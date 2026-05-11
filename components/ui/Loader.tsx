@@ -16,20 +16,25 @@ export default function Loader({ onComplete }: LoaderProps) {
 
   useEffect(() => {
     // ── CURTAINS — GSAP ──────────────────────────────────────────────────────
-    // Left starts at 80ms. Accelerates past the target (power2.in to -115%),
-    // skewing so the top edge leads. Elastic settle back to -102% with visible
-    // swing: curtain briefly reappears ~5–8vw before resting off-screen.
-    const leftTl = gsap.timeline({ delay: 0.08 })
-      .to(leftRef.current, { x: '-115%', skewX: -3, duration: 0.95, ease: 'power2.in' })
-      .to(leftRef.current, { x: '-102%', skewX: 0,  duration: 0.45, ease: 'elastic.out(0.55, 0.45)' })
+    // scaleX from wall edge: inner seam travels from screen-center to wall
+    // while fabric width compresses — the fold strips get denser as they bunch.
+    // skewY makes the top edge lead (diagonal pull, heavy bottom lags).
+    // Elastic bounce-back: brief sliver of fabric reappears before final settle.
+    gsap.set(leftRef.current,  { transformOrigin: 'left center' })
+    gsap.set(rightRef.current, { transformOrigin: 'right center' })
 
-    // Right starts 80ms after left — one mechanism pulling both panels.
-    const rightTl = gsap.timeline({ delay: 0.16 })
-      .to(rightRef.current, { x: '115%',  skewX: 3,  duration: 0.95, ease: 'power2.in' })
-      .to(rightRef.current, { x: '102%',  skewX: 0,  duration: 0.45, ease: 'elastic.out(0.55, 0.45)' })
+    const leftTl = gsap.timeline({ delay: 0.2 })
+      .to(leftRef.current,  { scaleX: 0,    skewY: -3, duration: 1.1, ease: 'power3.in' })
+      .to(leftRef.current,  { scaleX: 0.07, skewY: 0,  duration: 0.18, ease: 'power2.out' })
+      .to(leftRef.current,  { scaleX: 0,               duration: 0.22, ease: 'power2.in' })
+
+    // Right panel: 80ms after left — single-mechanism feel
+    const rightTl = gsap.timeline({ delay: 0.28 })
+      .to(rightRef.current, { scaleX: 0,    skewY: 3,  duration: 1.1, ease: 'power3.in' })
+      .to(rightRef.current, { scaleX: 0.07, skewY: 0,  duration: 0.18, ease: 'power2.out' })
+      .to(rightRef.current, { scaleX: 0,               duration: 0.22, ease: 'power2.in' })
 
     // ── PROGRESS + NAME REVEAL ───────────────────────────────────────────────
-    // Progress drives: name opacity (direct DOM), spotlight + subtitle (React state).
     const t2 = setTimeout(() => {
       const start = performance.now()
       const dur   = 1500
@@ -42,9 +47,11 @@ export default function Loader({ onComplete }: LoaderProps) {
       requestAnimationFrame(tick)
     }, 1000)
 
-    // ── BG FADE + GSAP FLIP ──────────────────────────────────────────────────
-    // At 2800ms: fade out loader chrome, then fly the name from its loader
-    // position to the hero element's natural DOM position via FLIP.
+    // ── BG FADE + GSAP FLY ───────────────────────────────────────────────────
+    // Fly element is created in document.body at z:10000 (above loader z:9000),
+    // so it is visible regardless of React stacking contexts.
+    // The hero name element keeps opacity:0 (via CSS) until the fly lands,
+    // avoiding any React re-render overwrite of GSAP-set opacity.
     const t5 = setTimeout(() => {
       setBgFade(true)
 
@@ -55,32 +62,63 @@ export default function Loader({ onComplete }: LoaderProps) {
         const fromRect = fromEl.getBoundingClientRect()
         const toRect   = toEl.getBoundingClientRect()
 
-        // FLIP deltas: how far the hero element is from where the loader name sits
-        const dx = fromRect.left - toRect.left
-        const dy = fromRect.top  - toRect.top
-        const sx = fromRect.width  / toRect.width
-        const sy = fromRect.height / toRect.height
+        // Fade out the loader copy
+        gsap.to(fromEl, { opacity: 0, duration: 0.25, ease: 'none' })
 
-        // Crossfade: loader name fades out as hero name takes over
-        gsap.to(fromEl, { opacity: 0, duration: 0.2, ease: 'none' })
+        // FLIP deltas — align fly element center to loader name center,
+        // then animate to hero's natural top-left position
+        const scale = fromRect.height / toRect.height
+        const dx    = (fromRect.left + fromRect.width  / 2) - (toRect.left + toRect.width  / 2)
+        const dy    = fromRect.top - toRect.top
 
-        // Hero name starts at loader position+size (via transform), flies to natural pos
+        // Body-level fly element: renders hero-size text, starts visually at
+        // loader position via transform, travels to hero position at scale 1
+        const fly = document.createElement('div')
+        fly.setAttribute('aria-hidden', 'true')
+        fly.style.cssText = [
+          'position:fixed',
+          `top:${toRect.top}px`,
+          `left:${toRect.left}px`,
+          'font-family:var(--font-cinzel)',
+          'font-weight:900',
+          'line-height:0.9',
+          'font-size:clamp(2.6rem,12vw,15rem)',
+          'z-index:10000',
+          'pointer-events:none',
+          'will-change:transform',
+        ].join(';')
+
+        // Gold-shimmer replicated inline so the span can be injected in body
+        const goldGrad = [
+          'background:linear-gradient(105deg,#C9A84C 0%,#C9A84C 28%,#FFF0A0 44%,#FFD060 50%,#C9A84C 66%,#C9A84C 100%)',
+          'background-size:400% 100%',
+          '-webkit-background-clip:text',
+          'background-clip:text',
+          '-webkit-text-fill-color:transparent',
+        ].join(';')
+
+        fly.innerHTML = `
+          <span style="display:block;color:#F0EDE8">RON</span>
+          <span style="display:block;${goldGrad}">PEREIRA</span>
+        `
+        document.body.appendChild(fly)
+
         gsap.fromTo(
-          toEl,
-          { x: dx, y: dy, scaleX: sx, scaleY: sy, opacity: 0, transformOrigin: 'top left' },
+          fly,
+          { x: dx, y: dy, scale, opacity: 1, transformOrigin: 'top center' },
           {
-            x: 0, y: 0, scaleX: 1, scaleY: 1, opacity: 1,
+            x: 0, y: 0, scale: 1, opacity: 1,
             duration: 0.85,
             ease: 'power3.inOut',
             onComplete() {
-              gsap.set(toEl, { clearProps: 'x,y,scaleX,scaleY,transformOrigin' })
+              fly.remove()
+              if (toEl) toEl.style.opacity = '1'
               window.dispatchEvent(new CustomEvent('rp:loader-done'))
               onComplete()
             },
           }
         )
       } else {
-        // Fallback: no hero element found
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('rp:loader-done'))
           onComplete()
@@ -111,7 +149,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         animate={{ opacity: bgFade ? 0 : 1 }}
         transition={{ duration: 0.4 }} />
 
-      {/* LEFT CURTAIN — GSAP-controlled via ref */}
+      {/* LEFT CURTAIN — GSAP scaleX from wall edge */}
       <div ref={leftRef} className="absolute top-0 left-0 bottom-0 overflow-hidden"
         style={{ width:'51vw', zIndex:30 }}>
         <div className="absolute inset-0" style={{ background:'linear-gradient(180deg,#1C0A1A 0%,#130610 40%,#0F0410 70%,#1A0818 100%)' }} />
@@ -128,7 +166,7 @@ export default function Loader({ onComplete }: LoaderProps) {
           style={{ background:'linear-gradient(270deg,rgba(0,0,0,0.92) 0%,rgba(55,8,32,0.55) 35%,transparent 100%)' }} />
       </div>
 
-      {/* RIGHT CURTAIN — GSAP-controlled via ref */}
+      {/* RIGHT CURTAIN — GSAP scaleX from wall edge */}
       <div ref={rightRef} className="absolute top-0 right-0 bottom-0 overflow-hidden"
         style={{ width:'51vw', zIndex:30 }}>
         <div className="absolute inset-0" style={{ background:'linear-gradient(180deg,#1C0A1A 0%,#130610 40%,#0F0410 70%,#1A0818 100%)' }} />
@@ -168,7 +206,7 @@ export default function Loader({ onComplete }: LoaderProps) {
             background:'radial-gradient(ellipse,rgba(255,248,230,0.07) 0%,transparent 65%)' }} />
       </motion.div>
 
-      {/* RON PEREIRA — always in DOM, opacity 0 → driven by RAF (no conditional mount = no flash) */}
+      {/* RON PEREIRA — always in DOM at opacity:0, RAF drives opacity directly */}
       <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none px-6">
         <div
           ref={nameRef}

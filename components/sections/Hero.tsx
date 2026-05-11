@@ -55,11 +55,11 @@ export default function Hero() {
           Mumbai &nbsp;·&nbsp; Available Worldwide
         </motion.p>
 
-        {/* RON PEREIRA — plain div, opacity 0; GSAP FLIP in Loader animates it into position */}
+        {/* RON PEREIRA — opacity:0 set in CSS via [data-hero-name]; GSAP fly in Loader reveals it */}
         <div
           data-hero-name
           className="font-[var(--font-cinzel)] font-black leading-[0.9]"
-          style={{ fontSize:'clamp(2.6rem,12vw,15rem)', opacity:0 }}
+          style={{ fontSize:'clamp(2.6rem,12vw,15rem)' }}
         >
           <span className="block text-[var(--cream)]">RON</span>
           <span className="block gold-shimmer">PEREIRA</span>
