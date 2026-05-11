@@ -11,8 +11,6 @@ export default function Loader({ onComplete }: LoaderProps) {
   const rightRef = useRef<HTMLDivElement>(null)
   const nameRef  = useRef<HTMLDivElement>(null)
 
-  // preFly: spotlight + subtitle fade just before the name travels
-  // bgFade: black background fades AFTER the name has landed
   const [preFly,   setPreFly]   = useState(false)
   const [bgFade,   setBgFade]   = useState(false)
   const [progress, setProgress] = useState(0)
@@ -32,7 +30,7 @@ export default function Loader({ onComplete }: LoaderProps) {
       .to(rightRef.current, { scaleX: 0.07, skewY: 0,  duration: 0.18, ease: 'power2.out' })
       .to(rightRef.current, { scaleX: 0,               duration: 0.22, ease: 'power2.in' })
 
-    // ── PROGRESS + NAME ───────────────────────────────────────────────────────
+    // ── PROGRESS + NAME REVEAL ───────────────────────────────────────────────
     const t2 = setTimeout(() => {
       const start = performance.now()
       const dur   = 1500
@@ -45,19 +43,24 @@ export default function Loader({ onComplete }: LoaderProps) {
       requestAnimationFrame(tick)
     }, 1000)
 
-    // ── NAME FLY ─────────────────────────────────────────────────────────────
-    // Phase 1 (t=2800ms): spotlight + subtitle fade, loader name fades,
-    //   fly element travels from center → hero position against the BLACK bg.
-    //   Black bg stays solid so the travel is clearly visible.
-    // Phase 2 (fly onComplete): reveal hero name, dispatch event, THEN fade bg.
-    // Phase 3 (700ms later): loader unmounts.
+    // ── THREE-PHASE FLY ──────────────────────────────────────────────────────
+    //  Phase 1 (0.35s): PEREIRA drops below RON — RON stays centered, small
+    //  Phase 2 (0.7s):  Both fly left to hero positions, scaling to hero size
+    //  Phase 3 (0.5s):  Black background fades, hero photo revealed
+    //
+    //  Fly elements live in document.body at z:10000 (above loader z:9000),
+    //  rendered at hero font-size via FLIP so text quality is full-res at landing.
+    //  Black bg stays solid during phases 1+2 so the travel is clearly visible.
+
+    const flyEls: HTMLElement[] = []
+
     const t5 = setTimeout(() => {
-      setPreFly(true) // fades spotlight + subtitle via Framer Motion
+      setPreFly(true) // fades spotlight + subtitle
 
-      const fromEl = nameRef.current
-      const toEl   = document.querySelector<HTMLElement>('[data-hero-name]')
+      const nameEl = nameRef.current
+      const heroEl = document.querySelector<HTMLElement>('[data-hero-name]')
 
-      if (!fromEl || !toEl) {
+      if (!nameEl || !heroEl) {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('rp:loader-done'))
           setBgFade(true)
@@ -66,39 +69,26 @@ export default function Loader({ onComplete }: LoaderProps) {
         return
       }
 
-      // Snapshot positions before any animation changes layout
-      const fromRect = fromEl.getBoundingClientRect()
-      const toRect   = toEl.getBoundingClientRect()
+      // Loader spans ("RON " and "PEREIRA" inline)
+      const ronLoaderSpan = nameEl.children[0] as HTMLElement
+      const perLoaderSpan = nameEl.children[1] as HTMLElement
+      const ronFrom = ronLoaderSpan.getBoundingClientRect()
+      const perFrom = perLoaderSpan.getBoundingClientRect()
 
-      // Loader name fades while fly takes over
-      gsap.to(fromEl, { opacity: 0, duration: 0.3, ease: 'none' })
+      // Hero spans (block-stacked: RON top, PEREIRA below)
+      const ronHeroSpan = heroEl.children[0] as HTMLElement
+      const perHeroSpan = heroEl.children[1] as HTMLElement
+      const toRON = ronHeroSpan.getBoundingClientRect()
+      const toPER = perHeroSpan.getBoundingClientRect()
 
-      // FLIP deltas — hero element is at toRect; we need it to start at fromRect
-      const scale = fromRect.height / toRect.height
-      // Center the initial position on the loader name's center
-      const dx = (fromRect.left + fromRect.width  / 2) - (toRect.left + toRect.width  / 2)
-      const dy = fromRect.top - toRect.top
+      // Scale factor: how much smaller the loader text is vs hero text
+      const loaderScale = ronFrom.height / toRON.height
 
-      // Body-level fly element: z:10000, above the loader (z:9000).
-      // Uses hero font-size so text renders at full quality and is never blurry.
-      // Starts visually at loader name size/position via FLIP transform.
-      const fly = document.createElement('div')
-      fly.setAttribute('aria-hidden', 'true')
-      Object.assign(fly.style, {
-        position:      'fixed',
-        top:           `${toRect.top}px`,
-        left:          `${toRect.left}px`,
-        fontFamily:    'var(--font-cinzel)',
-        fontWeight:    '900',
-        lineHeight:    '0.9',
-        fontSize:      'clamp(2.6rem,12vw,15rem)',
-        zIndex:        '10000',
-        pointerEvents: 'none',
-        willChange:    'transform',
-      })
+      // Fade the loader name out as fly elements take over
+      gsap.to(nameEl, { opacity: 0, duration: 0.3, ease: 'none' })
 
-      // Inline gold shimmer (matches .gold-shimmer in globals.css)
-      const goldStyle = [
+      // Gold-shimmer CSS inline (matches .gold-shimmer in globals.css)
+      const goldCSS = [
         'background:linear-gradient(105deg,#C9A84C 0%,#C9A84C 28%,#FFF0A0 44%,#FFD060 50%,#C9A84C 66%,#C9A84C 100%)',
         'background-size:400% 100%',
         '-webkit-background-clip:text',
@@ -107,37 +97,92 @@ export default function Loader({ onComplete }: LoaderProps) {
         'color:transparent',
       ].join(';')
 
-      fly.innerHTML = `
-        <span style="display:block;color:#F0EDE8">RON</span>
-        <span style="display:block;${goldStyle}">PEREIRA</span>
-      `
-      document.body.appendChild(fly)
+      // Create a body-level fly span at the hero span's natural position.
+      // FLIP transforms will shift it to appear at the loader position initially.
+      function makeFly(text: string, rect: DOMRect, isGold: boolean): HTMLElement {
+        const el = document.createElement('span')
+        el.setAttribute('aria-hidden', 'true')
+        el.textContent = text
+        el.style.cssText = [
+          'position:fixed',
+          `top:${rect.top}px`,
+          `left:${rect.left}px`,
+          'display:block',
+          'font-family:var(--font-cinzel)',
+          'font-weight:900',
+          'line-height:0.9',
+          'font-size:clamp(2.6rem,12vw,15rem)',
+          'z-index:10000',
+          'pointer-events:none',
+          'will-change:transform',
+          isGold ? goldCSS : 'color:#F0EDE8',
+        ].join(';')
+        document.body.appendChild(el)
+        flyEls.push(el)
+        return el
+      }
 
-      // FLIP: start at loader position + scale, animate to hero's natural position
-      gsap.fromTo(
-        fly,
-        { x: dx, y: dy, scale, transformOrigin: 'top center', opacity: 1 },
-        {
-          x: 0, y: 0, scale: 1, opacity: 1,
-          duration: 1.0,        // long enough for the travel to register visually
-          ease: 'power3.inOut',
-          onComplete() {
-            fly.remove()
+      const ronFly = makeFly('RON',     toRON, false)
+      const perFly = makeFly('PEREIRA', toPER, true)
 
-            // Reveal the actual hero element (inline style beats CSS [data-hero-name])
-            toEl.style.opacity = '1'
+      // Centre-X of each element (used for FLIP and intermediate alignment)
+      const ronFromCx = ronFrom.left + ronFrom.width / 2
+      const perFromCx = perFrom.left + perFrom.width / 2
+      const toRONCx   = toRON.left   + toRON.width  / 2
+      const toPERCx   = toPER.left   + toPER.width  / 2
 
-            // Signal hero to start its cascade (eyebrow, tagline, stats, socials)
-            window.dispatchEvent(new CustomEvent('rp:loader-done'))
+      // FLIP: transform each fly span so it appears at its loader position
+      gsap.set(ronFly, {
+        x: ronFromCx - toRONCx,
+        y: ronFrom.top - toRON.top,
+        scale: loaderScale,
+        transformOrigin: 'top center',
+      })
+      gsap.set(perFly, {
+        x: perFromCx - toPERCx,
+        y: perFrom.top - toPER.top,
+        scale: loaderScale,
+        transformOrigin: 'top center',
+      })
 
-            // NOW fade the black background — hero name is already in place
-            setBgFade(true)
+      // ── Phase 1: PEREIRA drops below RON ──
+      // RON does not move. PEREIRA animates from its inline position
+      // (right of RON) to just below RON, centre-aligned.
+      const perP1x = ronFromCx - toPERCx   // PEREIRA's centre = RON's centre
+      const perP1y = ronFrom.bottom - toPER.top // PEREIRA top = RON bottom
 
-            // Unmount loader after bg fade completes
-            setTimeout(onComplete, 700)
-          },
-        }
-      )
+      gsap.to(perFly, {
+        x: perP1x,
+        y: perP1y,
+        duration: 0.35,
+        ease: 'power3.out',
+
+        onComplete() {
+          // ── Phase 2: Both words fly left to hero positions ──
+          // RON travels from loader centre to hero RON position (bottom-left, large).
+          // PEREIRA travels from below-RON-centre to hero PEREIRA position.
+          // Both scale from loaderScale → 1 (hero size).
+          const tl2 = gsap.timeline({
+            onComplete() {
+              flyEls.forEach(el => el.remove())
+              flyEls.length = 0
+
+              // Reveal the actual hero name (inline style beats CSS opacity:0 rule)
+              heroEl.style.opacity = '1'
+
+              // Signal hero elements to cascade in
+              window.dispatchEvent(new CustomEvent('rp:loader-done'))
+
+              // ── Phase 3: Black fades, hero photo revealed ──
+              setBgFade(true)
+              setTimeout(onComplete, 650)
+            },
+          })
+
+          tl2.to(ronFly, { x: 0, y: 0, scale: 1, duration: 0.7, ease: 'power3.inOut' }, 0)
+          tl2.to(perFly, { x: 0, y: 0, scale: 1, duration: 0.7, ease: 'power3.inOut' }, 0)
+        },
+      })
     }, 2800)
 
     return () => {
@@ -145,13 +190,14 @@ export default function Loader({ onComplete }: LoaderProps) {
       clearTimeout(t5)
       leftTl.kill()
       rightTl.kill()
+      flyEls.forEach(el => el.remove())
     }
   }, [onComplete])
 
   return (
     <div className="fixed inset-0 z-[9000] overflow-hidden pointer-events-none">
 
-      {/* Dark background — stays solid during the name travel, fades after */}
+      {/* Black background — stays solid during phases 1+2, fades only after name lands */}
       <motion.div className="absolute inset-0"
         style={{ background: '#06040A' }}
         animate={{ opacity: bgFade ? 0 : 1 }}
@@ -197,11 +243,11 @@ export default function Loader({ onComplete }: LoaderProps) {
           style={{ background:'linear-gradient(90deg,rgba(0,0,0,0.92) 0%,rgba(55,8,32,0.55) 35%,transparent 100%)' }} />
       </div>
 
-      {/* SPOTLIGHT — fades with preFly so the screen is clean during travel */}
+      {/* SPOTLIGHT — fades with preFly so screen is clean during the fly */}
       <motion.div className="absolute inset-0 z-10 pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: (bgFade || preFly) ? 0 : progress }}
-        transition={{ duration: (bgFade || preFly) ? 0.35 : 0.05 }}>
+        transition={{ duration: (bgFade || preFly) ? 0.3 : 0.05 }}>
         <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"
           style={{ position:'absolute', inset:0 }}>
           <defs>
@@ -220,7 +266,7 @@ export default function Loader({ onComplete }: LoaderProps) {
             background:'radial-gradient(ellipse,rgba(255,248,230,0.07) 0%,transparent 65%)' }} />
       </motion.div>
 
-      {/* RON PEREIRA — always in DOM; opacity driven by RAF (no conditional mount) */}
+      {/* RON PEREIRA — always in DOM; RAF drives opacity, never conditionally mounted */}
       <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none px-6">
         <div
           ref={nameRef}
@@ -239,7 +285,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         </div>
       </div>
 
-      {/* Subtitle + bar — fades with preFly */}
+      {/* Subtitle + progress bar — fade with preFly */}
       <motion.div className="absolute z-20 flex flex-col items-center w-full pointer-events-none"
         style={{ top:'calc(50% + clamp(1.8rem,4vw,2.8rem))' }}
         initial={{ opacity: 0 }}
