@@ -1,6 +1,7 @@
 'use client'
 
-import { motion, LayoutGroup } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 
 const SOCIALS = [
   { href:'https://instagram.com/placeholder', label:'Instagram', icon:<svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg> },
@@ -19,12 +20,20 @@ const STATS = [
 const SPRING = { type:'spring' as const, stiffness:95, damping:18 }
 
 export default function Hero() {
-  // On return visits (back button) skip the loader delay
   const isReturn = typeof window !== 'undefined' && sessionStorage.getItem('rp_visited') === '1'
   const base = isReturn ? 0.1 : 1.7
 
-  // Mark as visited after first load
   if (typeof window !== 'undefined') sessionStorage.setItem('rp_visited', '1')
+
+  // Name is invisible until the layoutId fly-in completes (first visit)
+  // or after a short delay (return visits — no layoutId, just appears quickly)
+  const [nameVisible, setNameVisible] = useState(false)
+  useEffect(() => {
+    if (isReturn) {
+      const t = setTimeout(() => setNameVisible(true), 100)
+      return () => clearTimeout(t)
+    }
+  }, [isReturn])
 
   return (
     <section className="relative min-h-[100svh] flex flex-col justify-end overflow-hidden">
@@ -50,13 +59,18 @@ export default function Hero() {
           Mumbai &nbsp;·&nbsp; Available Worldwide
         </motion.p>
 
-        {/* RON PEREIRA — springs in from small/centered to full size */}
+        {/* RON PEREIRA — flies in from Loader via layoutId (first visit) or fades in (return) */}
         <motion.div
+          layoutId={isReturn ? undefined : 'hero-ron-pereira'}
           className="font-[var(--font-cinzel)] font-black leading-[0.9]"
           style={{ fontSize:'clamp(2.6rem,12vw,15rem)' }}
-          initial={{ opacity:0, scale:0.12, y:'-6vh' }}
-          animate={{ opacity:1, scale:1, y:0 }}
-          transition={{ type:'spring', stiffness:38, damping:12, mass:2.2, delay: base }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: nameVisible ? 1 : 0 }}
+          onLayoutAnimationStart={isReturn ? undefined : () => setNameVisible(true)}
+          transition={{
+            layout: { type:'spring', stiffness:38, damping:12, mass:2.2 },
+            opacity: { duration: 0.5 }
+          }}
         >
           <span className="block text-[var(--cream)]">RON</span>
           <span className="block gold-shimmer">PEREIRA</span>

@@ -7,20 +7,13 @@ interface LoaderProps { onComplete: () => void }
 
 export default function Loader({ onComplete }: LoaderProps) {
   const [curtainOpen, setCurtainOpen] = useState(false)
-  const [nameVisible,  setNameVisible]  = useState(false)
-  const [spotlightOn,  setSpotlightOn]  = useState(false)
-  const [bgFade,       setBgFade]       = useState(false) // fade bg but keep name visible
-  const [done,         setDone]         = useState(false)
-
-  // progress 0→1 for brightness
-  const [progress, setProgress] = useState(0)
+  const [bgFade,      setBgFade]      = useState(false)
+  const [done,        setDone]        = useState(false)
+  const [progress,    setProgress]    = useState(0)
 
   useEffect(() => {
-    const t1 = setTimeout(() => setCurtainOpen(true),  80)
+    const t1 = setTimeout(() => setCurtainOpen(true), 80)
     const t2 = setTimeout(() => {
-      setNameVisible(true)
-      setSpotlightOn(true)
-      // Start progress immediately with name
       const start = performance.now()
       const dur = 1500
       const tick = (now: number) => {
@@ -30,9 +23,7 @@ export default function Loader({ onComplete }: LoaderProps) {
       }
       requestAnimationFrame(tick)
     }, 1000)
-    // Fade bg, keep name — name flies to hero
     const t5 = setTimeout(() => { setBgFade(true); onComplete() }, 2800)
-    // After fly completes, remove loader
     const t6 = setTimeout(() => setDone(true), 3600)
     return () => { clearTimeout(t1);clearTimeout(t2);clearTimeout(t5);clearTimeout(t6) }
   }, [onComplete])
@@ -93,7 +84,7 @@ export default function Loader({ onComplete }: LoaderProps) {
       {/* SPOTLIGHT — starts black, brightens with progress */}
       <motion.div className="absolute inset-0 z-10 pointer-events-none"
         initial={{ opacity: 0 }}
-        animate={{ opacity: bgFade ? 0 : spotlightOn ? progress : 0 }}
+        animate={{ opacity: bgFade ? 0 : progress }}
         transition={{ duration: bgFade ? 0.4 : 0.05 }}>
         <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"
           style={{ position:'absolute', inset:0 }}>
@@ -113,33 +104,30 @@ export default function Loader({ onComplete }: LoaderProps) {
             background:'radial-gradient(ellipse,rgba(255,210,80,0.14) 0%,transparent 65%)' }} />
       </motion.div>
 
-      {/* RON PEREIRA — layoutId element, stays visible while bg fades */}
-      {nameVisible && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none px-6">
-          <motion.div
-            layoutId="hero-ron-pereira"
-            transition={{ type:'spring', stiffness:40, damping:12, mass:2 }}
-          >
-            <motion.div
-              className="font-[var(--font-cinzel)] font-black text-center"
-              style={{ fontSize:'clamp(0.85rem,3.5vw,1.75rem)', letterSpacing:'0.45em', textIndent:'0.45em', lineHeight:1.15, whiteSpace:'nowrap' }}
-              animate={{ opacity: bgFade ? 1 : spotlightOn ? progress : 0 }}
-              initial={{ opacity: 0 }}
-              transition={{ duration: 0.05 }}
-            >
-              <span style={{ color:'var(--cream)' }}>RON </span>
-              <span className="gold-shimmer">PEREIRA</span>
-            </motion.div>
-          </motion.div>
-        </div>
-      )}
+      {/* RON PEREIRA — always rendered; opacity driven by progress (no conditional mount = no flash) */}
+      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none px-6">
+        <motion.div
+          layoutId="hero-ron-pereira"
+          className="font-[var(--font-cinzel)] font-black text-center"
+          style={{ fontSize:'clamp(0.85rem,3.5vw,1.75rem)', letterSpacing:'0.45em', textIndent:'0.45em', lineHeight:1.15, whiteSpace:'nowrap' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: bgFade ? 1 : progress }}
+          transition={{
+            layout: { type:'spring', stiffness:40, damping:12, mass:2 },
+            opacity: { duration: 0.05 }
+          }}
+        >
+          <span style={{ color:'var(--cream)' }}>RON </span>
+          <span className="gold-shimmer">PEREIRA</span>
+        </motion.div>
+      </div>
 
-      {/* Subtitle + bar — fade with bg */}
-      {nameVisible && (
-        <motion.div className="absolute z-20 flex flex-col items-center w-full pointer-events-none"
-          style={{ top:'calc(50% + clamp(1.8rem,4vw,2.8rem))' }}
-          animate={{ opacity: bgFade ? 0 : spotlightOn ? progress : 0 }}
-          transition={{ duration: bgFade ? 0.3 : 0.1 }}>
+      {/* Subtitle + bar — always rendered; fades with bg */}
+      <motion.div className="absolute z-20 flex flex-col items-center w-full pointer-events-none"
+        style={{ top:'calc(50% + clamp(1.8rem,4vw,2.8rem))' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: bgFade ? 0 : progress }}
+        transition={{ duration: bgFade ? 0.3 : 0.1 }}>
           <span style={{ color:'var(--gold)', opacity:0.8, fontFamily:'var(--font-mono)', fontSize:'0.4rem', letterSpacing:'0.44em' }}>
             Musician &nbsp;·&nbsp; Performer &nbsp;·&nbsp; Educator
           </span>
@@ -150,7 +138,6 @@ export default function Loader({ onComplete }: LoaderProps) {
               transition={{ duration:0.05 }} />
           </div>
         </motion.div>
-      )}
     </div>
   )
 }
