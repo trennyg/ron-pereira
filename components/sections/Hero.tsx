@@ -16,24 +16,19 @@ const STATS = [
   { n:'8+',  l:'Distinct\nActs'     },
 ]
 
-// Shared easing
 const SPRING = { type:'spring' as const, stiffness:95, damping:18 }
 
 export default function Hero() {
-  const isReturn = typeof window !== 'undefined' && sessionStorage.getItem('rp_visited') === '1'
-  const base = isReturn ? 0.1 : 1.7
+  // heroReady fires when GSAP FLIP completes in Loader (rp:loader-done event).
+  // On return visits the Loader still runs the full sequence, so the event
+  // always fires at ~3.65s from page load.
+  const [heroReady, setHeroReady] = useState(false)
 
-  if (typeof window !== 'undefined') sessionStorage.setItem('rp_visited', '1')
-
-  // Name is invisible until the layoutId fly-in completes (first visit)
-  // or after a short delay (return visits — no layoutId, just appears quickly)
-  const [nameVisible, setNameVisible] = useState(false)
   useEffect(() => {
-    if (isReturn) {
-      const t = setTimeout(() => setNameVisible(true), 100)
-      return () => clearTimeout(t)
-    }
-  }, [isReturn])
+    const handler = () => setHeroReady(true)
+    window.addEventListener('rp:loader-done', handler)
+    return () => window.removeEventListener('rp:loader-done', handler)
+  }, [])
 
   return (
     <section className="relative min-h-[100svh] flex flex-col justify-end overflow-hidden">
@@ -52,42 +47,38 @@ export default function Hero() {
       {/* Content */}
       <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10">
 
-        {/* Eyebrow — below nav, no overlap */}
+        {/* Eyebrow */}
         <motion.p className="font-[var(--font-mono)] text-[0.55rem] tracking-[0.6em] text-[var(--gold)] mb-6 mt-2"
-          initial={{ opacity:0, x:-60 }} animate={{ opacity:0.85, x:0 }}
-          transition={{ ...SPRING, delay: base }}>
+          initial={{ opacity:0, x:-60 }}
+          animate={{ opacity: heroReady ? 0.85 : 0, x: heroReady ? 0 : -60 }}
+          transition={{ ...SPRING, delay: heroReady ? 0.1 : 0 }}>
           Mumbai &nbsp;·&nbsp; Available Worldwide
         </motion.p>
 
-        {/* RON PEREIRA — flies in from Loader via layoutId (first visit) or fades in (return) */}
-        <motion.div
-          layoutId={isReturn ? undefined : 'hero-ron-pereira'}
+        {/* RON PEREIRA — plain div, opacity 0; GSAP FLIP in Loader animates it into position */}
+        <div
+          data-hero-name
           className="font-[var(--font-cinzel)] font-black leading-[0.9]"
-          style={{ fontSize:'clamp(2.6rem,12vw,15rem)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: nameVisible ? 1 : 0 }}
-          onLayoutAnimationStart={isReturn ? undefined : () => setNameVisible(true)}
-          transition={{
-            layout: { type:'spring', stiffness:38, damping:12, mass:2.2 },
-            opacity: { duration: 0.5 }
-          }}
+          style={{ fontSize:'clamp(2.6rem,12vw,15rem)', opacity:0 }}
         >
           <span className="block text-[var(--cream)]">RON</span>
           <span className="block gold-shimmer">PEREIRA</span>
-        </motion.div>
+        </div>
 
         {/* Tagline */}
         <motion.p className="font-[var(--font-cormorant)] font-light italic text-[var(--cream-dim)] mt-5 tracking-[0.05em]"
           style={{ fontSize:'clamp(0.9rem,1.3vw,1.2rem)' }}
-          initial={{ opacity:0, x:'60vw' }} animate={{ opacity:1, x:0 }}
-          transition={{ ...SPRING, delay: base + 0.36 }}>
+          initial={{ opacity:0, x:'60vw' }}
+          animate={{ opacity: heroReady ? 1 : 0, x: heroReady ? 0 : '60vw' }}
+          transition={{ ...SPRING, delay: heroReady ? 0.25 : 0 }}>
           Crafting musical experiences that transcend the ordinary
         </motion.p>
 
         {/* Stats */}
         <motion.div className="flex gap-14 mt-6 pt-5 border-t border-[var(--gold-border)] max-sm:grid max-sm:grid-cols-2 max-sm:gap-4 max-sm:gap-x-8"
-          initial={{ opacity:0, x:'-60vw' }} animate={{ opacity:1, x:0 }}
-          transition={{ ...SPRING, delay: base + 0.46 }}>
+          initial={{ opacity:0, x:'-60vw' }}
+          animate={{ opacity: heroReady ? 1 : 0, x: heroReady ? 0 : '-60vw' }}
+          transition={{ ...SPRING, delay: heroReady ? 0.4 : 0 }}>
           {STATS.map(s => (
             <div key={s.n}>
               <span className="font-[var(--font-cinzel)] font-black gold-shimmer block leading-none" style={{ fontSize:'2rem' }}>{s.n}</span>
@@ -98,8 +89,9 @@ export default function Hero() {
 
         {/* Socials */}
         <motion.div className="flex gap-3 mt-5"
-          initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
-          transition={{ ...SPRING, delay: base + 0.56 }}>
+          initial={{ opacity:0, y:20 }}
+          animate={{ opacity: heroReady ? 1 : 0, y: heroReady ? 0 : 20 }}
+          transition={{ ...SPRING, delay: heroReady ? 0.55 : 0 }}>
           {SOCIALS.map(s => (
             <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
               aria-label={s.label} data-cursor-hover
@@ -112,7 +104,9 @@ export default function Hero() {
 
       {/* Scroll hint */}
       <motion.div className="absolute bottom-8 right-12 flex flex-col items-center gap-2 max-md:hidden"
-        initial={{ opacity:0 }} animate={{ opacity:0.55 }} transition={{ delay: base + 0.7 }}>
+        initial={{ opacity:0 }}
+        animate={{ opacity: heroReady ? 0.55 : 0 }}
+        transition={{ delay: heroReady ? 0.7 : 0 }}>
         <span className="font-[var(--font-mono)] text-[0.4rem] tracking-[0.4em] text-[var(--gold)] mb-5" style={{ writingMode:'vertical-rl' }}>Scroll</span>
         <div className="w-px h-12 bg-gradient-to-b from-[var(--gold)] to-transparent" style={{ animation:'scrollHint 2.2s ease-in-out infinite' }} />
       </motion.div>
