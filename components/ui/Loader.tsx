@@ -155,17 +155,23 @@ export default function Loader({ onComplete }: LoaderProps) {
           // ── Phase 2: Both fly left to hero positions ──
           gsap.timeline({
             onComplete() {
-              // Reveal hero BEFORE removing fly — no single-frame gap
+              // Reveal hero name (still hidden behind opaque bg — will show as bg fades)
               heroEl.style.opacity = '1'
-              flyEls.forEach(el => el.remove())
-              flyEls.length = 0
-
               window.dispatchEvent(new CustomEvent('rp:loader-done'))
 
-              // ── Phase 3: Cover photo fades in ──
-              gsap.to(bgRef.current,    { opacity: 0, duration: 0.55, ease: 'power1.in' })
-              gsap.to(grainRef.current, { opacity: 0, duration: 0.4  })
-              setTimeout(onComplete, 650)
+              // ── Phase 3: Blend cover photo in ──
+              // Fade bg first with a slow ease-out so it dissolves smoothly.
+              // Fly elements stay visible until bg is nearly gone (~820ms),
+              // preventing any frame where the name vanishes against solid dark.
+              gsap.to(bgRef.current,    { opacity: 0, duration: 1.0, ease: 'power2.out' })
+              gsap.to(grainRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
+
+              setTimeout(() => {
+                flyEls.forEach(el => el.remove())
+                flyEls.length = 0
+              }, 820)
+
+              setTimeout(onComplete, 1100)
             },
           })
             .to(ronFly, { x: 0, y: 0, scale: 1, duration: 0.7, ease: 'power3.inOut' }, 0)
