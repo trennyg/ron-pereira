@@ -49,7 +49,7 @@ export default function Loader({ onComplete }: LoaderProps) {
       <motion.div className="absolute top-0 left-0 bottom-0 overflow-hidden"
         style={{ width:'51vw', zIndex:30 }}
         animate={{ x: bgFade ? '-102%' : curtainOpen ? '-102%' : '0%' }}
-        transition={{ duration:0.9, ease:[0.76,0,0.24,1] }}>
+        transition={{ type:'spring', stiffness:45, damping:7, mass:1.8, restDelta:0.5 }}>
         <div className="absolute inset-0" style={{ background:'linear-gradient(180deg,#1C0A1A 0%,#130610 40%,#0F0410 70%,#1A0818 100%)' }} />
         <div className="absolute inset-0" style={{ background:'linear-gradient(90deg,rgba(80,10,50,0.7) 0%,rgba(160,40,90,0.15) 30%,rgba(60,8,35,0.5) 60%,rgba(40,5,25,0.8) 100%)' }} />
         {[9,22,35,48,61,74,87].map((p,i) => (
@@ -61,13 +61,16 @@ export default function Loader({ onComplete }: LoaderProps) {
         <div className="absolute left-0 top-0 bottom-0 w-[3px]"
           style={{ background:'linear-gradient(180deg,transparent 3%,#F0D080 15%,#C9A84C 40%,#F8E090 60%,#C9A84C 85%,transparent 97%)' }} />
         <div className="absolute bottom-0 left-0 right-0 h-5" style={{ background:'linear-gradient(180deg,transparent,rgba(0,0,0,0.7))' }} />
+        {/* Gathered-fold depth on inner (right) edge — fabric bunching as curtain sweeps off */}
+        <div className="absolute right-0 top-0 bottom-0 w-10"
+          style={{ background:'linear-gradient(270deg,rgba(0,0,0,0.92) 0%,rgba(55,8,32,0.55) 35%,transparent 100%)' }} />
       </motion.div>
 
       {/* RIGHT CURTAIN */}
       <motion.div className="absolute top-0 right-0 bottom-0 overflow-hidden"
         style={{ width:'51vw', zIndex:30 }}
         animate={{ x: bgFade ? '102%' : curtainOpen ? '102%' : '0%' }}
-        transition={{ duration:0.9, ease:[0.76,0,0.24,1] }}>
+        transition={{ type:'spring', stiffness:45, damping:7, mass:1.8, restDelta:0.5 }}>
         <div className="absolute inset-0" style={{ background:'linear-gradient(180deg,#1C0A1A 0%,#130610 40%,#0F0410 70%,#1A0818 100%)' }} />
         <div className="absolute inset-0" style={{ background:'linear-gradient(270deg,rgba(80,10,50,0.7) 0%,rgba(160,40,90,0.15) 30%,rgba(60,8,35,0.5) 60%,rgba(40,5,25,0.8) 100%)' }} />
         {[9,22,35,48,61,74,87].map((p,i) => (
@@ -79,6 +82,9 @@ export default function Loader({ onComplete }: LoaderProps) {
         <div className="absolute right-0 top-0 bottom-0 w-[3px]"
           style={{ background:'linear-gradient(180deg,transparent 3%,#F0D080 15%,#C9A84C 40%,#F8E090 60%,#C9A84C 85%,transparent 97%)' }} />
         <div className="absolute bottom-0 left-0 right-0 h-5" style={{ background:'linear-gradient(180deg,transparent,rgba(0,0,0,0.7))' }} />
+        {/* Gathered-fold depth on inner (left) edge */}
+        <div className="absolute left-0 top-0 bottom-0 w-10"
+          style={{ background:'linear-gradient(90deg,rgba(0,0,0,0.92) 0%,rgba(55,8,32,0.55) 35%,transparent 100%)' }} />
       </motion.div>
 
       {/* SPOTLIGHT — starts black, brightens with progress */}
@@ -90,10 +96,10 @@ export default function Loader({ onComplete }: LoaderProps) {
           style={{ position:'absolute', inset:0 }}>
           <defs>
             <linearGradient id="cg2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor="#FFE899" stopOpacity="0.95"/>
-              <stop offset="12%"  stopColor="#FFCC44" stopOpacity="0.6"/>
-              <stop offset="40%"  stopColor="#C87820" stopOpacity="0.2"/>
-              <stop offset="100%" stopColor="#804000" stopOpacity="0"/>
+              <stop offset="0%"   stopColor="#FFFFFF"  stopOpacity="0.62"/>
+              <stop offset="14%"  stopColor="#FFF3DC"  stopOpacity="0.28"/>
+              <stop offset="45%"  stopColor="#DDA858"  stopOpacity="0.07"/>
+              <stop offset="100%" stopColor="#804000"  stopOpacity="0"/>
             </linearGradient>
           </defs>
           <polygon points="32,0 68,0 92,100 8,100" fill="url(#cg2)"/>
@@ -101,7 +107,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         <div className="absolute pointer-events-none"
           style={{ top:'48%', left:'50%', transform:'translate(-50%,-50%)',
             width:'80vw', maxWidth:'600px', height:'180px', borderRadius:'50%',
-            background:'radial-gradient(ellipse,rgba(255,210,80,0.14) 0%,transparent 65%)' }} />
+            background:'radial-gradient(ellipse,rgba(255,248,230,0.07) 0%,transparent 65%)' }} />
       </motion.div>
 
       {/* RON PEREIRA — always rendered; opacity driven by progress (no conditional mount = no flash) */}
