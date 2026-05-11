@@ -11,15 +11,14 @@ export default function Loader({ onComplete }: LoaderProps) {
   const rightRef = useRef<HTMLDivElement>(null)
   const nameRef  = useRef<HTMLDivElement>(null)
 
+  // preFly: spotlight + subtitle fade just before the name travels
+  // bgFade: black background fades AFTER the name has landed
+  const [preFly,   setPreFly]   = useState(false)
   const [bgFade,   setBgFade]   = useState(false)
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
-    // ── CURTAINS — GSAP ──────────────────────────────────────────────────────
-    // scaleX from wall edge: inner seam travels from screen-center to wall
-    // while fabric width compresses — the fold strips get denser as they bunch.
-    // skewY makes the top edge lead (diagonal pull, heavy bottom lags).
-    // Elastic bounce-back: brief sliver of fabric reappears before final settle.
+    // ── CURTAINS ─────────────────────────────────────────────────────────────
     gsap.set(leftRef.current,  { transformOrigin: 'left center' })
     gsap.set(rightRef.current, { transformOrigin: 'right center' })
 
@@ -28,13 +27,12 @@ export default function Loader({ onComplete }: LoaderProps) {
       .to(leftRef.current,  { scaleX: 0.07, skewY: 0,  duration: 0.18, ease: 'power2.out' })
       .to(leftRef.current,  { scaleX: 0,               duration: 0.22, ease: 'power2.in' })
 
-    // Right panel: 80ms after left — single-mechanism feel
     const rightTl = gsap.timeline({ delay: 0.28 })
       .to(rightRef.current, { scaleX: 0,    skewY: 3,  duration: 1.1, ease: 'power3.in' })
       .to(rightRef.current, { scaleX: 0.07, skewY: 0,  duration: 0.18, ease: 'power2.out' })
       .to(rightRef.current, { scaleX: 0,               duration: 0.22, ease: 'power2.in' })
 
-    // ── PROGRESS + NAME REVEAL ───────────────────────────────────────────────
+    // ── PROGRESS + NAME ───────────────────────────────────────────────────────
     const t2 = setTimeout(() => {
       const start = performance.now()
       const dur   = 1500
@@ -47,83 +45,99 @@ export default function Loader({ onComplete }: LoaderProps) {
       requestAnimationFrame(tick)
     }, 1000)
 
-    // ── BG FADE + GSAP FLY ───────────────────────────────────────────────────
-    // Fly element is created in document.body at z:10000 (above loader z:9000),
-    // so it is visible regardless of React stacking contexts.
-    // The hero name element keeps opacity:0 (via CSS) until the fly lands,
-    // avoiding any React re-render overwrite of GSAP-set opacity.
+    // ── NAME FLY ─────────────────────────────────────────────────────────────
+    // Phase 1 (t=2800ms): spotlight + subtitle fade, loader name fades,
+    //   fly element travels from center → hero position against the BLACK bg.
+    //   Black bg stays solid so the travel is clearly visible.
+    // Phase 2 (fly onComplete): reveal hero name, dispatch event, THEN fade bg.
+    // Phase 3 (700ms later): loader unmounts.
     const t5 = setTimeout(() => {
-      setBgFade(true)
+      setPreFly(true) // fades spotlight + subtitle via Framer Motion
 
       const fromEl = nameRef.current
       const toEl   = document.querySelector<HTMLElement>('[data-hero-name]')
 
-      if (fromEl && toEl) {
-        const fromRect = fromEl.getBoundingClientRect()
-        const toRect   = toEl.getBoundingClientRect()
-
-        // Fade out the loader copy
-        gsap.to(fromEl, { opacity: 0, duration: 0.25, ease: 'none' })
-
-        // FLIP deltas — align fly element center to loader name center,
-        // then animate to hero's natural top-left position
-        const scale = fromRect.height / toRect.height
-        const dx    = (fromRect.left + fromRect.width  / 2) - (toRect.left + toRect.width  / 2)
-        const dy    = fromRect.top - toRect.top
-
-        // Body-level fly element: renders hero-size text, starts visually at
-        // loader position via transform, travels to hero position at scale 1
-        const fly = document.createElement('div')
-        fly.setAttribute('aria-hidden', 'true')
-        fly.style.cssText = [
-          'position:fixed',
-          `top:${toRect.top}px`,
-          `left:${toRect.left}px`,
-          'font-family:var(--font-cinzel)',
-          'font-weight:900',
-          'line-height:0.9',
-          'font-size:clamp(2.6rem,12vw,15rem)',
-          'z-index:10000',
-          'pointer-events:none',
-          'will-change:transform',
-        ].join(';')
-
-        // Gold-shimmer replicated inline so the span can be injected in body
-        const goldGrad = [
-          'background:linear-gradient(105deg,#C9A84C 0%,#C9A84C 28%,#FFF0A0 44%,#FFD060 50%,#C9A84C 66%,#C9A84C 100%)',
-          'background-size:400% 100%',
-          '-webkit-background-clip:text',
-          'background-clip:text',
-          '-webkit-text-fill-color:transparent',
-        ].join(';')
-
-        fly.innerHTML = `
-          <span style="display:block;color:#F0EDE8">RON</span>
-          <span style="display:block;${goldGrad}">PEREIRA</span>
-        `
-        document.body.appendChild(fly)
-
-        gsap.fromTo(
-          fly,
-          { x: dx, y: dy, scale, opacity: 1, transformOrigin: 'top center' },
-          {
-            x: 0, y: 0, scale: 1, opacity: 1,
-            duration: 0.85,
-            ease: 'power3.inOut',
-            onComplete() {
-              fly.remove()
-              if (toEl) toEl.style.opacity = '1'
-              window.dispatchEvent(new CustomEvent('rp:loader-done'))
-              onComplete()
-            },
-          }
-        )
-      } else {
+      if (!fromEl || !toEl) {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('rp:loader-done'))
-          onComplete()
+          setBgFade(true)
+          setTimeout(onComplete, 700)
         }, 900)
+        return
       }
+
+      // Snapshot positions before any animation changes layout
+      const fromRect = fromEl.getBoundingClientRect()
+      const toRect   = toEl.getBoundingClientRect()
+
+      // Loader name fades while fly takes over
+      gsap.to(fromEl, { opacity: 0, duration: 0.3, ease: 'none' })
+
+      // FLIP deltas — hero element is at toRect; we need it to start at fromRect
+      const scale = fromRect.height / toRect.height
+      // Center the initial position on the loader name's center
+      const dx = (fromRect.left + fromRect.width  / 2) - (toRect.left + toRect.width  / 2)
+      const dy = fromRect.top - toRect.top
+
+      // Body-level fly element: z:10000, above the loader (z:9000).
+      // Uses hero font-size so text renders at full quality and is never blurry.
+      // Starts visually at loader name size/position via FLIP transform.
+      const fly = document.createElement('div')
+      fly.setAttribute('aria-hidden', 'true')
+      Object.assign(fly.style, {
+        position:      'fixed',
+        top:           `${toRect.top}px`,
+        left:          `${toRect.left}px`,
+        fontFamily:    'var(--font-cinzel)',
+        fontWeight:    '900',
+        lineHeight:    '0.9',
+        fontSize:      'clamp(2.6rem,12vw,15rem)',
+        zIndex:        '10000',
+        pointerEvents: 'none',
+        willChange:    'transform',
+      })
+
+      // Inline gold shimmer (matches .gold-shimmer in globals.css)
+      const goldStyle = [
+        'background:linear-gradient(105deg,#C9A84C 0%,#C9A84C 28%,#FFF0A0 44%,#FFD060 50%,#C9A84C 66%,#C9A84C 100%)',
+        'background-size:400% 100%',
+        '-webkit-background-clip:text',
+        'background-clip:text',
+        '-webkit-text-fill-color:transparent',
+        'color:transparent',
+      ].join(';')
+
+      fly.innerHTML = `
+        <span style="display:block;color:#F0EDE8">RON</span>
+        <span style="display:block;${goldStyle}">PEREIRA</span>
+      `
+      document.body.appendChild(fly)
+
+      // FLIP: start at loader position + scale, animate to hero's natural position
+      gsap.fromTo(
+        fly,
+        { x: dx, y: dy, scale, transformOrigin: 'top center', opacity: 1 },
+        {
+          x: 0, y: 0, scale: 1, opacity: 1,
+          duration: 1.0,        // long enough for the travel to register visually
+          ease: 'power3.inOut',
+          onComplete() {
+            fly.remove()
+
+            // Reveal the actual hero element (inline style beats CSS [data-hero-name])
+            toEl.style.opacity = '1'
+
+            // Signal hero to start its cascade (eyebrow, tagline, stats, socials)
+            window.dispatchEvent(new CustomEvent('rp:loader-done'))
+
+            // NOW fade the black background — hero name is already in place
+            setBgFade(true)
+
+            // Unmount loader after bg fade completes
+            setTimeout(onComplete, 700)
+          },
+        }
+      )
     }, 2800)
 
     return () => {
@@ -137,11 +151,11 @@ export default function Loader({ onComplete }: LoaderProps) {
   return (
     <div className="fixed inset-0 z-[9000] overflow-hidden pointer-events-none">
 
-      {/* Dark background */}
+      {/* Dark background — stays solid during the name travel, fades after */}
       <motion.div className="absolute inset-0"
         style={{ background: '#06040A' }}
         animate={{ opacity: bgFade ? 0 : 1 }}
-        transition={{ duration: 0.6, ease: 'easeIn' }} />
+        transition={{ duration: 0.55, ease: 'easeIn' }} />
 
       {/* Grain */}
       <motion.div className="absolute inset-0 pointer-events-none"
@@ -149,7 +163,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         animate={{ opacity: bgFade ? 0 : 1 }}
         transition={{ duration: 0.4 }} />
 
-      {/* LEFT CURTAIN — GSAP scaleX from wall edge */}
+      {/* LEFT CURTAIN */}
       <div ref={leftRef} className="absolute top-0 left-0 bottom-0 overflow-hidden"
         style={{ width:'51vw', zIndex:30 }}>
         <div className="absolute inset-0" style={{ background:'linear-gradient(180deg,#1C0A1A 0%,#130610 40%,#0F0410 70%,#1A0818 100%)' }} />
@@ -166,7 +180,7 @@ export default function Loader({ onComplete }: LoaderProps) {
           style={{ background:'linear-gradient(270deg,rgba(0,0,0,0.92) 0%,rgba(55,8,32,0.55) 35%,transparent 100%)' }} />
       </div>
 
-      {/* RIGHT CURTAIN — GSAP scaleX from wall edge */}
+      {/* RIGHT CURTAIN */}
       <div ref={rightRef} className="absolute top-0 right-0 bottom-0 overflow-hidden"
         style={{ width:'51vw', zIndex:30 }}>
         <div className="absolute inset-0" style={{ background:'linear-gradient(180deg,#1C0A1A 0%,#130610 40%,#0F0410 70%,#1A0818 100%)' }} />
@@ -183,11 +197,11 @@ export default function Loader({ onComplete }: LoaderProps) {
           style={{ background:'linear-gradient(90deg,rgba(0,0,0,0.92) 0%,rgba(55,8,32,0.55) 35%,transparent 100%)' }} />
       </div>
 
-      {/* SPOTLIGHT */}
+      {/* SPOTLIGHT — fades with preFly so the screen is clean during travel */}
       <motion.div className="absolute inset-0 z-10 pointer-events-none"
         initial={{ opacity: 0 }}
-        animate={{ opacity: bgFade ? 0 : progress }}
-        transition={{ duration: bgFade ? 0.4 : 0.05 }}>
+        animate={{ opacity: (bgFade || preFly) ? 0 : progress }}
+        transition={{ duration: (bgFade || preFly) ? 0.35 : 0.05 }}>
         <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"
           style={{ position:'absolute', inset:0 }}>
           <defs>
@@ -206,7 +220,7 @@ export default function Loader({ onComplete }: LoaderProps) {
             background:'radial-gradient(ellipse,rgba(255,248,230,0.07) 0%,transparent 65%)' }} />
       </motion.div>
 
-      {/* RON PEREIRA — always in DOM at opacity:0, RAF drives opacity directly */}
+      {/* RON PEREIRA — always in DOM; opacity driven by RAF (no conditional mount) */}
       <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none px-6">
         <div
           ref={nameRef}
@@ -225,12 +239,12 @@ export default function Loader({ onComplete }: LoaderProps) {
         </div>
       </div>
 
-      {/* Subtitle + progress bar */}
+      {/* Subtitle + bar — fades with preFly */}
       <motion.div className="absolute z-20 flex flex-col items-center w-full pointer-events-none"
         style={{ top:'calc(50% + clamp(1.8rem,4vw,2.8rem))' }}
         initial={{ opacity: 0 }}
-        animate={{ opacity: bgFade ? 0 : progress }}
-        transition={{ duration: bgFade ? 0.3 : 0.1 }}>
+        animate={{ opacity: (bgFade || preFly) ? 0 : progress }}
+        transition={{ duration: (bgFade || preFly) ? 0.25 : 0.1 }}>
         <span style={{ color:'var(--gold)', opacity:0.8, fontFamily:'var(--font-mono)', fontSize:'0.4rem', letterSpacing:'0.44em' }}>
           Musician &nbsp;·&nbsp; Performer &nbsp;·&nbsp; Educator
         </span>
