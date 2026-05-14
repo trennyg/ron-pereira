@@ -103,11 +103,6 @@ body {
   color: var(--gold-l);
 }
 
-/* ══ HERO NAME — hidden until GSAP fly lands ══ */
-/* Inline style set by GSAP (toEl.style.opacity = '1') outranks this rule,
-   and React won't reset it because the JSX has no opacity in its style prop. */
-[data-hero-name] { opacity: 0; }
-
 /* ══ GOLD SHIMMER UTILITY ══ */
 .gold-shimmer {
   background: var(--gold-sh);

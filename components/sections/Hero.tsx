@@ -19,9 +19,7 @@ const STATS = [
 const SPRING = { type:'spring' as const, stiffness:95, damping:18 }
 
 export default function Hero() {
-  // heroReady fires when GSAP FLIP completes in Loader (rp:loader-done event).
-  // On return visits the Loader still runs the full sequence, so the event
-  // always fires at ~3.65s from page load.
+  // heroReady fires when rp:loader-done is dispatched by Loader after bg dissolves.
   const [heroReady, setHeroReady] = useState(false)
 
   useEffect(() => {
@@ -31,7 +29,11 @@ export default function Hero() {
   }, [])
 
   return (
-    <section className="relative min-h-[100svh] flex flex-col justify-end overflow-hidden">
+    // data-hero-section — queried by Loader to reparent the travelling name element
+    <section
+      data-hero-section
+      className="relative min-h-[100svh] flex flex-col justify-end overflow-hidden"
+    >
 
       {/* Cover photo — Ken Burns */}
       <div className="absolute inset-0 z-0 overflow-hidden">
@@ -48,18 +50,23 @@ export default function Hero() {
       <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10">
 
         {/* Eyebrow */}
-        <motion.p className="font-[var(--font-mono)] text-[0.55rem] tracking-[0.6em] text-[var(--gold)] mb-6 mt-2"
+        <motion.p className="font-[var(--font-cinzel)] text-[0.55rem] tracking-[0.6em] text-[var(--gold)] mb-6 mt-2"
           initial={{ opacity:0, x:-60 }}
           animate={{ opacity: heroReady ? 0.85 : 0, x: heroReady ? 0 : -60 }}
           transition={{ ...SPRING, delay: heroReady ? 0.1 : 0 }}>
           Mumbai &nbsp;·&nbsp; Available Worldwide
         </motion.p>
 
-        {/* RON PEREIRA — opacity:0 set in CSS via [data-hero-name]; GSAP fly in Loader reveals it */}
+        {/* RON PEREIRA layout placeholder.
+            opacity:0 inline — permanently invisible. The visible name is the
+            travelling element reparented here by Loader after the bg dissolves.
+            Text is present so the div has the correct font-metric height,
+            keeping tagline/stats/socials at the right positions. */}
         <div
-          data-hero-name
+          data-hero-slot
+          aria-hidden="true"
           className="font-[var(--font-cinzel)] font-black leading-[0.9]"
-          style={{ fontSize:'clamp(2.6rem,12vw,15rem)' }}
+          style={{ fontSize:'clamp(2.6rem,12vw,15rem)', opacity: 0 }}
         >
           <span className="block text-[var(--cream)]">RON</span>
           <span className="block gold-shimmer">PEREIRA</span>
