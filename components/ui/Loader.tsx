@@ -215,12 +215,24 @@ export default function Loader({ onComplete }: LoaderProps) {
               if (aborted) return
 
               // ── Same-frame clean handoff ──────────────────────────────────
-              // clearProps:'all' removes any GSAP residue from heroEl so it
-              // returns to pure document flow. opacity:1 reveals it immediately.
+              // clearProps:'transform' ONLY — clearing 'all' would wipe the
+              // opacity:1 we're setting because GSAP runs clearProps as a
+              // post-render step, after it applies the tween's final values.
+              // Clearing only 'transform' removes any residual GSAP transform
+              // without touching opacity. opacity:1 then overrides the CSS
+              // rule [data-hero-name]{opacity:0} via inline specificity.
               // fly elements go opacity:0 in the same JS execution frame —
               // the browser paints exactly once with heroEl visible and fly gone.
-              gsap.set(heroEl, { clearProps: 'all', opacity: 1 })
+              gsap.set(heroEl, { opacity: 1, clearProps: 'transform' })
               gsap.set([ronFly, perFly], { opacity: 0 })
+
+              // Safety net — if anything downstream overrides the opacity:1
+              // (another GSAP tween, a React re-render resetting inline styles,
+              // etc.) this fires 2s later as an unconditional guarantee.
+              setTimeout(() => {
+                const safeEl = document.querySelector<HTMLElement>('[data-hero-name]')
+                if (safeEl) gsap.set(safeEl, { opacity: 1, clearProps: 'transform' })
+              }, 2000)
 
               // Hero content cascade chains from this dispatch — never a
               // parallel timer. Eyebrow, tagline, stats, socials all fire here.
