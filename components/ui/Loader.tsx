@@ -214,41 +214,32 @@ export default function Loader({ onComplete }: LoaderProps) {
             onComplete() {
               if (aborted) return
 
-              // ── Same-frame clean handoff ──────────────────────────────────
-              // clearProps:'transform' ONLY — clearing 'all' would wipe the
-              // opacity:1 we're setting because GSAP runs clearProps as a
-              // post-render step, after it applies the tween's final values.
-              // Clearing only 'transform' removes any residual GSAP transform
-              // without touching opacity. opacity:1 then overrides the CSS
-              // rule [data-hero-name]{opacity:0} via inline specificity.
-              // fly elements go opacity:0 in the same JS execution frame —
-              // the browser paints exactly once with heroEl visible and fly gone.
-              gsap.set(heroEl, { opacity: 1, clearProps: 'transform' })
-              gsap.set([ronFly, perFly], { opacity: 0 })
-
-              // Safety net — if anything downstream overrides the opacity:1
-              // (another GSAP tween, a React re-render resetting inline styles,
-              // etc.) this fires 2s later as an unconditional guarantee.
-              setTimeout(() => {
-                const safeEl = document.querySelector<HTMLElement>('[data-hero-name]')
-                if (safeEl) gsap.set(safeEl, { opacity: 1, clearProps: 'transform' })
-              }, 2000)
-
-              // Hero content cascade chains from this dispatch — never a
-              // parallel timer. Eyebrow, tagline, stats, socials all fire here.
-              window.dispatchEvent(new CustomEvent('rp:loader-done'))
-
-              // ── Phase 3: Cover photo blends in ───────────────────────────
+              // ── Phase 3: Loader overlay dissolves — fly IS the name ───────
+              // Do NOT touch fly elements or heroEl yet. The fly elements are
+              // sitting at the hero position, fully visible, acting as the name
+              // while the cover photo fades in around them.
               // power2.out: fast initial dissolve that eases to a gentle stop.
-              // fly elements are invisible but stay in DOM until bg is gone —
-              // removed cleanly after the transition completes.
               gsap.to(bgRef.current,    { opacity: 0, duration: 1.0, ease: 'power2.out' })
               gsap.to(grainRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
 
+              // ── Scroll-safe name swap at bg≈0 ────────────────────────────
+              // At 900ms, power2.out has faded bg to ~0.01 — imperceptibly
+              // transparent. Perform the swap in one requestAnimationFrame:
+              //   1. heroEl.style.opacity = '1'  (inline beats CSS opacity:0 rule)
+              //   2. remove fly elements          (fixed-position, won't scroll)
+              //   3. dispatch rp:loader-done      (cascade: eyebrow, tagline, etc.)
+              // Browser paints exactly once — no frame with zero name visible,
+              // no frame with two names at different positions.
+              // After swap, heroEl is static in-flow and scrolls with the page.
               setTimeout(() => {
-                flyEls.forEach(el => el.remove())
-                flyEls.length = 0
-              }, 820)
+                if (aborted) return
+                requestAnimationFrame(() => {
+                  heroEl.style.opacity = '1'
+                  flyEls.forEach(el => el.remove())
+                  flyEls.length = 0
+                  window.dispatchEvent(new CustomEvent('rp:loader-done'))
+                })
+              }, 900)
 
               setTimeout(onComplete, 1100)
             },
