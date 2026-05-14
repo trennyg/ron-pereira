@@ -17,6 +17,9 @@ export default function Loader({ onComplete }: LoaderProps) {
   const barRef       = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // aborted = true in cleanup prevents stale async continuations firing
+    // after the component unmounts (e.g. fast navigation or dev hot-reload).
+    let aborted = false
     const flyEls: HTMLElement[] = []
 
     // ── CURTAINS ─────────────────────────────────────────────────────────────
@@ -49,176 +52,203 @@ export default function Loader({ onComplete }: LoaderProps) {
     }, 1000)
 
     // ── THREE-PHASE FLY ───────────────────────────────────────────────────────
-    const t5 = setTimeout(() => {
-      // document.fonts.ready resolves once all fonts finish loading (success or fail).
-      // By t=2800ms fonts are almost always loaded, so this fires synchronously in
-      // the microtask queue — no added delay. On slow connections it prevents stale
-      // hero rects caused by a Cinzel layout reflow after measurement.
-      document.fonts.ready.then(() => {
-        gsap.to(spotlightRef.current, { opacity: 0, duration: 0.3,  ease: 'none' })
-        gsap.to(subtitleRef.current,  { opacity: 0, duration: 0.25, ease: 'none' })
+    // async callback is intentional — two sequential layout-settle guards must
+    // complete before any rect is measured. Both resolve synchronously from
+    // cache in normal conditions; only slow connections see a real wait.
+    const t5 = setTimeout(async () => {
 
-        const nameEl = nameRef.current
-        const heroEl = document.querySelector<HTMLElement>('[data-hero-name]')
+      // ── Gate 1: hero-cover.jpg must be loaded ────────────────────────────
+      // The cover photo renders as a CSS background-image (no <img> element),
+      // so we probe the browser cache via new Image(). If hero-cover.jpg is
+      // already downloaded (usual at t=2800ms), complete=true and we skip the
+      // wait entirely. On slow connections we wait before measuring, so the
+      // hero section layout has settled around the image's final dimensions.
+      const coverImg = new Image()
+      coverImg.src = '/images/hero-cover.jpg'
+      if (!coverImg.complete) {
+        await new Promise<void>(resolve => {
+          coverImg.onload  = () => resolve()
+          coverImg.onerror = () => resolve() // don't block on a failed load
+        })
+      }
 
-        if (!nameEl || !heroEl) {
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('rp:loader-done'))
-            gsap.to(bgRef.current,    { opacity: 0, duration: 0.55 })
-            gsap.to(grainRef.current, { opacity: 0, duration: 0.4  })
-            setTimeout(onComplete, 700)
-          }, 900)
-          return
-        }
+      // ── Gate 2: Cinzel must be rendered at its final metrics ─────────────
+      // Prevents stale rects from a hero-name reflow after font swap.
+      await document.fonts.ready
 
-        // Loader spans are inline — getBoundingClientRect gives accurate text bounds
-        const ronFrom = (nameEl.children[0] as HTMLElement).getBoundingClientRect()
-        const perFrom = (nameEl.children[1] as HTMLElement).getBoundingClientRect()
+      if (aborted) return
 
-        // Hero spans are display:block — their layout box is the full container width,
-        // not the text content width. Range API gives the actual rendered text rect.
-        function textRect(el: HTMLElement): DOMRect {
-          const r = document.createRange()
-          r.selectNodeContents(el)
-          const rect = r.getBoundingClientRect()
-          return rect.height > 0 ? rect : el.getBoundingClientRect()
-        }
+      gsap.to(spotlightRef.current, { opacity: 0, duration: 0.3,  ease: 'none' })
+      gsap.to(subtitleRef.current,  { opacity: 0, duration: 0.25, ease: 'none' })
 
-        // Initial hero measurements — used for FLIP setup and delta calc in Phase 1.
-        const toRON = textRect(heroEl.children[0] as HTMLElement)
-        const toPER = textRect(heroEl.children[1] as HTMLElement)
+      const nameEl = nameRef.current
+      const heroEl = document.querySelector<HTMLElement>('[data-hero-name]')
 
-        const loaderScale = ronFrom.height / toRON.height
+      if (!nameEl || !heroEl) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('rp:loader-done'))
+          gsap.to(bgRef.current,    { opacity: 0, duration: 0.55 })
+          gsap.to(grainRef.current, { opacity: 0, duration: 0.4  })
+          setTimeout(onComplete, 700)
+        }, 900)
+        return
+      }
 
-        // Fade loader name as fly elements take over
-        gsap.to(nameEl, { opacity: 0, duration: 0.25, ease: 'none' })
+      // Loader spans are inline — getBoundingClientRect gives accurate text bounds.
+      const ronFrom = (nameEl.children[0] as HTMLElement).getBoundingClientRect()
+      const perFrom = (nameEl.children[1] as HTMLElement).getBoundingClientRect()
 
-        const goldCSS = [
-          'background:linear-gradient(105deg,#C9A84C 0%,#C9A84C 28%,#FFF0A0 44%,#FFD060 50%,#C9A84C 66%,#C9A84C 100%)',
-          'background-size:400% 100%',
-          '-webkit-background-clip:text',
-          'background-clip:text',
-          '-webkit-text-fill-color:transparent',
-          'color:transparent',
+      // Hero spans are display:block — their layout box equals the full container
+      // width, not the text content width. Range API returns the actual text rect.
+      function textRect(el: HTMLElement): DOMRect {
+        const r = document.createRange()
+        r.selectNodeContents(el)
+        const rect = r.getBoundingClientRect()
+        return rect.height > 0 ? rect : el.getBoundingClientRect()
+      }
+
+      // First hero measurement — image loaded, fonts loaded, layout settled.
+      const toRON = textRect(heroEl.children[0] as HTMLElement)
+      const toPER = textRect(heroEl.children[1] as HTMLElement)
+
+      const loaderScale = ronFrom.height / toRON.height
+
+      // Fade loader name as body-level fly elements take over
+      gsap.to(nameEl, { opacity: 0, duration: 0.25, ease: 'none' })
+
+      const goldCSS = [
+        'background:linear-gradient(105deg,#C9A84C 0%,#C9A84C 28%,#FFF0A0 44%,#FFD060 50%,#C9A84C 66%,#C9A84C 100%)',
+        'background-size:400% 100%',
+        '-webkit-background-clip:text',
+        'background-clip:text',
+        '-webkit-text-fill-color:transparent',
+        'color:transparent',
+      ].join(';')
+
+      // Body-level fly span — z:10000, hero font-size for full render quality.
+      // CSS top/left set to hero position; FLIP transform offsets to loader.
+      // opacity:0 until gsap.set reveals it in the same synchronous call.
+      function makeFly(text: string, rect: DOMRect, isGold: boolean): HTMLElement {
+        const el = document.createElement('span')
+        el.setAttribute('aria-hidden', 'true')
+        el.textContent = text
+        el.style.cssText = [
+          'position:fixed',
+          `top:${rect.top}px`,
+          `left:${rect.left}px`,
+          'display:block',
+          'font-family:var(--font-cinzel)',
+          'font-weight:900',
+          'line-height:0.9',
+          'font-size:clamp(2.6rem,12vw,15rem)',
+          'z-index:10000',
+          'pointer-events:none',
+          'will-change:transform',
+          'opacity:0',
+          isGold ? goldCSS : 'color:#F0EDE8',
         ].join(';')
+        document.body.appendChild(el)
+        flyEls.push(el)
+        return el
+      }
 
-        // Body-level fly span — z:10000, hero font-size (text renders at full quality).
-        // CSS top/left placed at hero position; FLIP transform offsets it to loader position.
-        // opacity:0 until gsap.set applies opacity:1 in the same synchronous call.
-        function makeFly(text: string, rect: DOMRect, isGold: boolean): HTMLElement {
-          const el = document.createElement('span')
-          el.setAttribute('aria-hidden', 'true')
-          el.textContent = text
-          el.style.cssText = [
-            'position:fixed',
-            `top:${rect.top}px`,
-            `left:${rect.left}px`,
-            'display:block',
-            'font-family:var(--font-cinzel)',
-            'font-weight:900',
-            'line-height:0.9',
-            'font-size:clamp(2.6rem,12vw,15rem)',
-            'z-index:10000',
-            'pointer-events:none',
-            'will-change:transform',
-            'opacity:0',
-            isGold ? goldCSS : 'color:#F0EDE8',
-          ].join(';')
-          document.body.appendChild(el)
-          flyEls.push(el)
-          return el
-        }
+      const ronFly = makeFly('RON',     toRON, false)
+      const perFly = makeFly('PEREIRA', toPER, true)
 
-        const ronFly = makeFly('RON',     toRON, false)
-        const perFly = makeFly('PEREIRA', toPER, true)
+      // Text centres (for horizontal alignment in the FLIP math)
+      const ronFromCx = ronFrom.left + ronFrom.width  / 2
+      const perFromCx = perFrom.left + perFrom.width  / 2
+      const toRONCx   = toRON.left   + toRON.width    / 2
+      const toPERCx   = toPER.left   + toPER.width    / 2
 
-        // Text centres (used for horizontal alignment)
-        const ronFromCx = ronFrom.left + ronFrom.width  / 2
-        const perFromCx = perFrom.left + perFrom.width  / 2
-        const toRONCx   = toRON.left   + toRON.width    / 2
-        const toPERCx   = toPER.left   + toPER.width    / 2
+      // FLIP: transform each fly so it visually appears at its loader position.
+      // opacity:1 set in the same synchronous gsap.set — no stray paint.
+      gsap.set(ronFly, {
+        opacity: 1, x: ronFromCx - toRONCx, y: ronFrom.top - toRON.top,
+        scale: loaderScale, transformOrigin: 'top center',
+      })
+      gsap.set(perFly, {
+        opacity: 1, x: perFromCx - toPERCx, y: perFrom.top - toPER.top,
+        scale: loaderScale, transformOrigin: 'top center',
+      })
 
-        // FLIP: transform each fly so it visually appears at its loader position.
-        // opacity:1 set in the same synchronous gsap.set — no stray paint at wrong position.
-        gsap.set(ronFly, {
-          opacity: 1, x: ronFromCx - toRONCx, y: ronFrom.top - toRON.top,
-          scale: loaderScale, transformOrigin: 'top center',
-        })
-        gsap.set(perFly, {
-          opacity: 1, x: perFromCx - toPERCx, y: perFrom.top - toPER.top,
-          scale: loaderScale, transformOrigin: 'top center',
-        })
+      // ── Phase 1: PEREIRA drops below RON (RON stays put) ──
+      gsap.to(perFly, {
+        x: ronFromCx - toPERCx,
+        y: ronFrom.bottom - toPER.top,
+        duration: 0.35,
+        ease: 'power3.out',
 
-        // ── Phase 1: PEREIRA drops below RON (RON stays put) ──
-        gsap.to(perFly, {
-          x: ronFromCx - toPERCx,
-          y: ronFrom.bottom - toPER.top,
-          duration: 0.35,
-          ease: 'power3.out',
+        onComplete() {
+          if (aborted) return
 
-          onComplete() {
-            // ── Re-anchor fly elements to current hero position ──────────────
-            // Re-measure immediately before Phase 2 begins. This corrects for:
-            //   • any scroll that occurred during Phase 1 (350ms)
-            //   • any layout reflow triggered by Framer Motion or other components
-            // The technique: update CSS top/left to the fresh hero position, then
-            // compensate the GSAP x/y by the same delta — visual position unchanged,
-            // but Phase 2's {x:0,y:0} target now resolves to the current hero rect.
-            const freshRON = textRect(heroEl.children[0] as HTMLElement)
-            const freshPER = textRect(heroEl.children[1] as HTMLElement)
+          // ── Re-anchor fly elements to current hero position ──────────────
+          // Re-measure immediately before Phase 2. Corrects any scroll offset
+          // that accumulated during Phase 1 (350ms). Technique: update fly CSS
+          // top/left to fresh hero coords, compensate GSAP x/y by the same
+          // delta so visual position is maintained. Phase 2's {x:0,y:0} target
+          // then resolves to the hero element's actual current viewport rect.
+          const freshRON = textRect(heroEl.children[0] as HTMLElement)
+          const freshPER = textRect(heroEl.children[1] as HTMLElement)
 
-            const ronGsapX = gsap.getProperty(ronFly, 'x') as number
-            const ronGsapY = gsap.getProperty(ronFly, 'y') as number
-            ronFly.style.top  = `${freshRON.top}px`
-            ronFly.style.left = `${freshRON.left}px`
-            gsap.set(ronFly, {
-              x: ronGsapX + (toRON.left - freshRON.left),
-              y: ronGsapY + (toRON.top  - freshRON.top),
-            })
+          const ronGsapX = gsap.getProperty(ronFly, 'x') as number
+          const ronGsapY = gsap.getProperty(ronFly, 'y') as number
+          ronFly.style.top  = `${freshRON.top}px`
+          ronFly.style.left = `${freshRON.left}px`
+          gsap.set(ronFly, {
+            x: ronGsapX + (toRON.left - freshRON.left),
+            y: ronGsapY + (toRON.top  - freshRON.top),
+          })
 
-            const perGsapX = gsap.getProperty(perFly, 'x') as number
-            const perGsapY = gsap.getProperty(perFly, 'y') as number
-            perFly.style.top  = `${freshPER.top}px`
-            perFly.style.left = `${freshPER.left}px`
-            gsap.set(perFly, {
-              x: perGsapX + (toPER.left - freshPER.left),
-              y: perGsapY + (toPER.top  - freshPER.top),
-            })
+          const perGsapX = gsap.getProperty(perFly, 'x') as number
+          const perGsapY = gsap.getProperty(perFly, 'y') as number
+          perFly.style.top  = `${freshPER.top}px`
+          perFly.style.left = `${freshPER.left}px`
+          gsap.set(perFly, {
+            x: perGsapX + (toPER.left - freshPER.left),
+            y: perGsapY + (toPER.top  - freshPER.top),
+          })
 
-            // ── Phase 2: Both fly to hero positions ──
-            gsap.timeline({
-              onComplete() {
-                // Reveal hero name — still hidden behind opaque bg, shows as bg fades
-                heroEl.style.opacity = '1'
-                // Defensive clear in case any stale GSAP transform was applied to heroEl
-                gsap.set(heroEl, { clearProps: 'transform' })
+          // ── Phase 2: Both fly to hero positions ──
+          gsap.timeline({
+            onComplete() {
+              if (aborted) return
 
-                window.dispatchEvent(new CustomEvent('rp:loader-done'))
+              // ── Same-frame clean handoff ──────────────────────────────────
+              // clearProps:'all' removes any GSAP residue from heroEl so it
+              // returns to pure document flow. opacity:1 reveals it immediately.
+              // fly elements go opacity:0 in the same JS execution frame —
+              // the browser paints exactly once with heroEl visible and fly gone.
+              gsap.set(heroEl, { clearProps: 'all', opacity: 1 })
+              gsap.set([ronFly, perFly], { opacity: 0 })
 
-                // ── Phase 3: Blend cover photo in ──
-                // power2.out: fast initial fade that slows to a smooth stop —
-                // cover photo dissolves in rather than cutting.
-                // Fly elements stay visible until bg is ~97% gone (820ms of 1000ms)
-                // so the name is never invisible against a still-dark background.
-                gsap.to(bgRef.current,    { opacity: 0, duration: 1.0, ease: 'power2.out' })
-                gsap.to(grainRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
+              // Hero content cascade chains from this dispatch — never a
+              // parallel timer. Eyebrow, tagline, stats, socials all fire here.
+              window.dispatchEvent(new CustomEvent('rp:loader-done'))
 
-                setTimeout(() => {
-                  flyEls.forEach(el => el.remove())
-                  flyEls.length = 0
-                }, 820)
+              // ── Phase 3: Cover photo blends in ───────────────────────────
+              // power2.out: fast initial dissolve that eases to a gentle stop.
+              // fly elements are invisible but stay in DOM until bg is gone —
+              // removed cleanly after the transition completes.
+              gsap.to(bgRef.current,    { opacity: 0, duration: 1.0, ease: 'power2.out' })
+              gsap.to(grainRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
 
-                setTimeout(onComplete, 1100)
-              },
-            })
-              .to(ronFly, { x: 0, y: 0, scale: 1, duration: 0.7, ease: 'power3.inOut' }, 0)
-              .to(perFly, { x: 0, y: 0, scale: 1, duration: 0.7, ease: 'power3.inOut' }, 0)
-          },
-        })
+              setTimeout(() => {
+                flyEls.forEach(el => el.remove())
+                flyEls.length = 0
+              }, 820)
+
+              setTimeout(onComplete, 1100)
+            },
+          })
+            .to(ronFly, { x: 0, y: 0, scale: 1, duration: 0.7, ease: 'power3.inOut' }, 0)
+            .to(perFly, { x: 0, y: 0, scale: 1, duration: 0.7, ease: 'power3.inOut' }, 0)
+        },
       })
     }, 2800)
 
     return () => {
+      aborted = true
       clearTimeout(t2)
       clearTimeout(t5)
       leftTl.kill()
