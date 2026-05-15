@@ -321,17 +321,17 @@ function PackagesSection({ svc }: { svc: Service }) {
         Packages & Pricing
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory md:grid md:grid-cols-2 md:overflow-visible md:pb-0 scrollbar-hide">
         {svc.packages!.map((pkg, i) => (
           <motion.div
             key={pkg.id}
+            className="flex-shrink-0 w-[82vw] snap-start md:w-auto border border-[var(--gold-border)] p-8 bg-[rgba(6,4,10,0.55)] backdrop-blur-sm hover:border-[var(--gold-border-h)] transition-colors relative overflow-hidden group"
             initial={{ opacity: 0, x: i % 2 === 0 ? -200 : 200, scale: 0.92 }}
             animate={inView
               ? { opacity: 1, x: 0, scale: 1 }
               : { opacity: 0, x: i % 2 === 0 ? -200 : 200, scale: 0.92 }
             }
             transition={{ type: 'spring', stiffness: 80, damping: 18, delay: i * 0.08 }}
-className="border border-[var(--gold-border)] p-8 bg-[rgba(6,4,10,0.55)] backdrop-blur-sm hover:border-[var(--gold-border-h)] transition-colors relative overflow-hidden group"
           >
             <div className="flex justify-between items-start mb-4">
               <h3 className="font-[var(--font-cinzel)] font-bold text-[1.1rem] tracking-[0.04em]">
@@ -341,12 +341,12 @@ className="border border-[var(--gold-border)] p-8 bg-[rgba(6,4,10,0.55)] backdro
                 {pkg.price}
               </span>
             </div>
-            <p className="font-[var(--font-cormorant)] text-[0.95rem] font-light leading-[1.85] text-[var(--cream-dim)] mb-5">
+            <p className="font-[var(--font-cormorant)] text-[0.95rem] font-light leading-[1.85] text-[var(--gold)] mb-5">
               {pkg.desc}
             </p>
             <ul className="flex flex-col gap-2 mb-6">
               {pkg.items.map(item => (
-                <li key={item} className="flex items-center gap-3 font-[var(--font-cormorant)] text-[0.88rem] text-[var(--cream-dim)]">
+                <li key={item} className="flex items-center gap-3 font-[var(--font-cormorant)] text-[0.88rem] text-[var(--gold)]">
                   <span className="text-[var(--gold)] text-xs">✦</span>
                   {item}
                 </li>
