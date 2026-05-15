@@ -86,7 +86,13 @@ export default function Loader({ onComplete }: LoaderProps) {
           window.dispatchEvent(new CustomEvent('rp:loader-done'))
           gsap.to(bgRef.current,    { opacity: 0, duration: 0.55 })
           gsap.to(grainRef.current, { opacity: 0, duration: 0.4  })
-          setTimeout(onComplete, 700)
+          // hero:ready fires after the Loader's GSAP work is done so counters
+          // in Hero.tsx never compete with any active GSAP animation on iOS.
+          setTimeout(() => {
+            if (aborted) return
+            window.dispatchEvent(new CustomEvent('hero:ready'))
+            onComplete()
+          }, 700)
         }, 900)
         return
       }
@@ -221,17 +227,10 @@ export default function Loader({ onComplete }: LoaderProps) {
               gsap.to(bgRef.current,    { opacity: 0, duration: 1.0, ease: 'power2.out' })
               gsap.to(grainRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
 
-              // ── Reparent at bg≈0 ─────────────────────────────────────────
+              // ── Reparent at bg≈0 + dispatch rp:loader-done ───────────────
               // At 900ms, power2.out has faded the bg to ~0.01 — effectively
               // gone. Reparent both fly elements from document.body into the
               // hero section as position:absolute so they scroll with the page.
-              // Steps (all in one requestAnimationFrame — one paint):
-              //   1. Record each fly's current viewport rect (fixed, viewport coords)
-              //   2. appendChild to hero section
-              //   3. Switch to position:absolute using the stored rect
-              //   4. clearProps:'transform' — remove GSAP's inline transform
-              // Visual position: heroRect.top + (flyRect.top − heroRect.top) = flyRect.top ✓
-              // No swap, no second name element — the fly IS the hero name.
               setTimeout(() => {
                 if (aborted) return
                 requestAnimationFrame(() => {
@@ -239,7 +238,7 @@ export default function Loader({ onComplete }: LoaderProps) {
                   if (heroSection) {
                     const heroRect = heroSection.getBoundingClientRect()
                     ;[ronFly, perFly].forEach(el => {
-                      const elRect = el.getBoundingClientRect() // fixed: viewport coords
+                      const elRect = el.getBoundingClientRect()
                       heroSection.appendChild(el)
                       el.style.position   = 'absolute'
                       el.style.top        = `${elRect.top  - heroRect.top}px`
@@ -248,12 +247,21 @@ export default function Loader({ onComplete }: LoaderProps) {
                       gsap.set(el, { clearProps: 'transform' })
                     })
                   }
-                  flyEls.length = 0 // reparented — no longer managed by cleanup
+                  flyEls.length = 0
                   window.dispatchEvent(new CustomEvent('rp:loader-done'))
                 })
               }, 900)
 
-              setTimeout(onComplete, 1100)
+              // ── hero:ready — fires after ALL Loader GSAP work is done ─────
+              // bgRef (1.0s) and grainRef (0.8s) both complete before this
+              // fires at 1100ms. Zero active GSAP animations remain when
+              // Hero.tsx's vanilla rAF counters begin — no ticker contention,
+              // no mid-count freezes on iOS Safari.
+              setTimeout(() => {
+                if (aborted) return
+                window.dispatchEvent(new CustomEvent('hero:ready'))
+                onComplete()
+              }, 1100)
             },
           })
             .to(ronFly, { x: 0, y: 0, scale: 1, duration: 0.7, ease: 'power3.inOut' }, 0)
