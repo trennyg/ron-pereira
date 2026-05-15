@@ -51,12 +51,14 @@ export default function Hero() {
       className="relative min-h-[100svh] flex flex-col justify-end max-sm:justify-start overflow-hidden isolate"
     >
 
-      {/* Cover photo — Next.js Image with priority.
-          priority={true} causes Next.js to inject <link rel="preload"> in
-          <head> so the image is fetched and decoded before first paint. */}
+      {/* Cover photo — contained with explicit overflow:hidden at every layer.
+          mix-blend-mode:screen on the scaled div creates a compositing layer
+          that can escape a parent's overflow clip in some browsers. Adding
+          overflow:hidden directly on the motion.div anchors the clip to this
+          element regardless of compositing layer promotion. */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <motion.div
-          className="absolute inset-0"
+          className="absolute inset-0 overflow-hidden"
           style={{ backgroundColor: '#1A0800', mixBlendMode: 'screen' as const }}
           initial={{ scale: 1.12 }}
           animate={{ scale: 1.04 }}

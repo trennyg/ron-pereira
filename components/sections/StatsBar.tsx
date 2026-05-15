@@ -75,7 +75,7 @@ export default function StatsBar() {
   return (
     <section
       style={{
-        background: 'var(--obsidian)',
+        background: '#0A0A0C',
         borderTop: '1px solid rgba(201,168,76,0.08)',
         opacity: triggered ? 1 : 0,
         transform: triggered ? 'translateY(0)' : 'translateY(40px)',
