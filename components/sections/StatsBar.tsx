@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
 
 const STATS = [
   { value: 18,  suffix: '+', label: 'Years Performing'     },
@@ -9,6 +8,8 @@ const STATS = [
   { value: 200, suffix: '+', label: 'Collaborations'       },
   { value: 12,  suffix: '+', label: 'Awards & Recognition' },
 ]
+
+const EASE = 'cubic-bezier(0.19,1,0.22,1)'
 
 function animateCounter(el: HTMLElement, target: number, duration: number): void {
   let lastTime: number | null = null
@@ -52,9 +53,6 @@ export default function StatsBar() {
       (entries) => {
         if (!entries[0].isIntersecting) return
         observer.disconnect()
-
-        // Flip triggered — drives the Framer animate prop permanently.
-        // Once true it never reverts, so opacity:1 is held forever.
         setTriggered(true)
 
         STATS.forEach((stat, idx) => {
@@ -75,14 +73,13 @@ export default function StatsBar() {
   }, [])
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.4 }}
-      transition={{ duration: 0.8, ease: [0.19, 1, 0.22, 1] }}
+    <section
       style={{
         background: 'var(--obsidian)',
         borderTop: '1px solid rgba(201,168,76,0.08)',
+        opacity: triggered ? 1 : 0,
+        transform: triggered ? 'translateY(0)' : 'translateY(40px)',
+        transition: `opacity 0.8s ${EASE}, transform 0.8s ${EASE}`,
       }}
     >
       <div
@@ -95,14 +92,12 @@ export default function StatsBar() {
         "
       >
         {STATS.map((stat, idx) => (
-          <motion.div
+          <div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={triggered ? { opacity: 1, y: 0 } : undefined}
-            transition={{
-              duration: 0.6,
-              ease: [0.19, 1, 0.22, 1],
-              delay: idx * 0.12,
+            style={{
+              opacity: triggered ? 1 : 0,
+              transform: triggered ? 'translateY(0)' : 'translateY(20px)',
+              transition: `opacity 0.6s ${EASE} ${idx * 0.12}s, transform 0.6s ${EASE} ${idx * 0.12}s`,
             }}
           >
             {/* Number + suffix */}
@@ -130,7 +125,7 @@ export default function StatsBar() {
                   height: '100%',
                   width: '0%',
                   background: 'rgba(201,168,76,0.2)',
-                  transition: 'width 2000ms cubic-bezier(0.19,1,0.22,1)',
+                  transition: `width 2000ms ${EASE}`,
                 }}
               />
             </div>
@@ -142,9 +137,9 @@ export default function StatsBar() {
             >
               {stat.label}
             </p>
-          </motion.div>
+          </div>
         ))}
       </div>
-    </motion.section>
+    </section>
   )
 }
