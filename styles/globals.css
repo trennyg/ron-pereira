@@ -326,6 +326,9 @@ section { overflow-x: hidden; }
 
 @keyframes pulse { 0%,100%{opacity:0.8;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.85)} }
 
+.scrollbar-hide { scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* ══ ANDROID PERFORMANCE — reduce GPU-heavy effects ══ */
 @media (max-width: 900px) {
   /* Remove backdrop-filter on mobile — huge GPU cost on Android */

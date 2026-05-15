@@ -170,10 +170,11 @@ function ActsSection({ svc }: { svc: Service }) {
           transition={{ type:'spring', stiffness:90, damping:20, delay:0.1 }}>Your Format</motion.span>
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:pb-0 scrollbar-hide">
         {svc.acts!.map((act, i) => (
           <motion.div
             key={act.id}
+            className="flex-shrink-0 w-[82vw] snap-start md:w-auto"
             initial={{ opacity: 0, y: 60, scale: 0.92 }}
             animate={inView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 60, scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 80, damping: 18, delay: i * 0.07 }}
@@ -191,7 +192,7 @@ function ActsSection({ svc }: { svc: Service }) {
               <h3 className="font-[var(--font-cinzel)] font-bold text-[1.15rem] mb-3 tracking-[0.04em]">
                 {act.name}
               </h3>
-              <p className="font-[var(--font-cormorant)] text-[0.92rem] font-light leading-[1.8] text-[var(--cream-dim)] mb-5">
+              <p className="font-[var(--font-cormorant)] text-[0.92rem] font-light leading-[1.8] text-[var(--gold)] mb-5">
                 {act.desc}
               </p>
 
@@ -251,10 +252,11 @@ function SubServicesSection({ svc }: { svc: Service }) {
           transition={{ type: 'spring', stiffness: 90, damping: 20, delay: 0.1 }}>Available</motion.span>
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:pb-0 scrollbar-hide">
         {svc.subServices!.map((sub, i) => (
           <motion.div
             key={sub.name}
+            className="flex-shrink-0 w-[82vw] snap-start md:w-auto"
             initial={{ opacity: 0, y: 60, scale: 0.92 }}
             animate={inView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 60, scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 80, damping: 18, delay: i * 0.07 }}
@@ -267,7 +269,7 @@ function SubServicesSection({ svc }: { svc: Service }) {
                 <h3 className="font-[var(--font-cinzel)] font-bold text-[1.15rem] mb-3 tracking-[0.04em]">
                   {sub.name}
                 </h3>
-                <p className="font-[var(--font-cormorant)] text-[0.92rem] font-light leading-[1.8] text-[var(--cream-dim)] mb-5">
+                <p className="font-[var(--font-cormorant)] text-[0.92rem] font-light leading-[1.8] text-[var(--gold)] mb-5">
                   {sub.desc}
                 </p>
 
