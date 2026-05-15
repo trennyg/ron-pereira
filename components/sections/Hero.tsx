@@ -48,7 +48,7 @@ export default function Hero() {
   return (
     <section
       data-hero-section
-      className="relative min-h-[100svh] flex flex-col justify-end overflow-hidden isolate"
+      className="relative min-h-[100svh] flex flex-col justify-end max-sm:justify-start overflow-hidden isolate"
     >
 
       {/* Cover photo — Next.js Image with priority.
@@ -76,7 +76,7 @@ export default function Hero() {
         <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 80% 60% at 65% 45%,rgba(160,80,10,0.22),transparent 70%)' }} />
       </div>
 
-      <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10">
+      <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pt-24 max-sm:pb-10">
 
         <p
           ref={eyebrowRef}
