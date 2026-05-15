@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 
 const STATS = [
@@ -39,6 +39,7 @@ function animateCounter(el: HTMLElement, target: number, duration: number): void
 }
 
 export default function StatsBar() {
+  const [triggered, setTriggered] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const numberRefs   = useRef<(HTMLSpanElement | null)[]>([])
   const lineRefs     = useRef<(HTMLDivElement | null)[]>([])
@@ -51,6 +52,10 @@ export default function StatsBar() {
       (entries) => {
         if (!entries[0].isIntersecting) return
         observer.disconnect()
+
+        // Flip triggered — drives the Framer animate prop permanently.
+        // Once true it never reverts, so opacity:1 is held forever.
+        setTriggered(true)
 
         STATS.forEach((stat, idx) => {
           setTimeout(() => {
@@ -93,8 +98,7 @@ export default function StatsBar() {
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.4 }}
+            animate={triggered ? { opacity: 1, y: 0 } : undefined}
             transition={{
               duration: 0.6,
               ease: [0.19, 1, 0.22, 1],
