@@ -125,7 +125,7 @@ export default function Loader({ onComplete }: LoaderProps) {
 
       // Yield one frame — iOS processes the batched layout recalcs here
       // before we begin creating DOM elements and GSAP animations.
-      await new Promise<void>(r => requestAnimationFrame(r))
+      await new Promise<void>(r => requestAnimationFrame(() => r()))
       if (aborted) return
 
       const loaderScale = ronFrom.height / toRON.height
