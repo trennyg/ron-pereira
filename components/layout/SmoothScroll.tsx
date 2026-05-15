@@ -10,18 +10,19 @@ import Lenis from 'lenis'
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
+  // ── Cause 1 fix: disable browser scroll restoration once on mount ──────────
+  // Next.js App Router does not disable native scroll restoration. The browser
+  // remembers scroll position per URL and restores it after components mount —
+  // AFTER any synchronous Lenis reset, silently overriding it. Setting this
+  // in a dedicated effect runs as early as possible on the client.
+  useEffect(() => {
+    window.history.scrollRestoration = 'manual'
+  }, [])
+
   // ── Lenis initialisation — runs once on mount ──────────────────────────────
   useEffect(() => {
-    // Prevent the browser from restoring a saved scroll position on back/forward
-    // navigation, and prevent hash fragments in the URL from jumping mid-page.
-    window.history.scrollRestoration = 'manual'
-
-    // Force the native scroll position to 0 immediately.
     window.scrollTo(0, 0)
 
-    // Hash-based scrolling (e.g. /#booking) fires asynchronously after the
-    // browser parses the URL. A rAF override runs after that microtask and
-    // cancels any position the browser applied for the hash.
     const rafId = requestAnimationFrame(() => window.scrollTo(0, 0))
 
     const lenis = new Lenis({
@@ -30,7 +31,6 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       smoothWheel: true,
     })
 
-    // Sync Lenis internal position with the native 0 we just forced.
     lenis.scrollTo(0, { immediate: true })
 
     ;(globalThis as any).__lenis = lenis
@@ -48,16 +48,30 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // ── Route-change scroll reset ──────────────────────────────────────────────
-  // Fires synchronously on every pathname change — before the new page's
-  // entrance animations begin. Lenis persists across client-side navigations
-  // and does not auto-reset, so we must reset it explicitly here.
+  // ── Cause 2 + 3 fix: route-change scroll reset with rAF + rootElement ──────
+  // Cause 3: the previous effect ran synchronously — before Lenis is ready on
+  // the new page. Wrapping in rAF defers execution until after the browser
+  // paint so the Lenis instance is fully initialised when scrollTo fires.
+  //
+  // Cause 2: if Lenis internally uses a wrapper element rather than window,
+  // window.scrollTo(0,0) has no effect. Resetting lenis.rootElement.scrollTop
+  // directly covers that case. document.documentElement and document.body are
+  // belt-and-braces resets for any remaining edge case.
   useEffect(() => {
-    const lenis = (globalThis as any).__lenis
-    if (lenis) {
-      lenis.scrollTo(0, { immediate: true })
-    }
-    window.scrollTo(0, 0)
+    const rafId = requestAnimationFrame(() => {
+      const lenis: any = (globalThis as any).__lenis
+      if (lenis) {
+        lenis.scrollTo(0, { immediate: true })
+        if (lenis.rootElement) {
+          lenis.rootElement.scrollTop = 0
+        }
+      }
+      window.scrollTo(0, 0)
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    })
+
+    return () => cancelAnimationFrame(rafId)
   }, [pathname])
 
   return <>{children}</>
