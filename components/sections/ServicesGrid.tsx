@@ -76,7 +76,7 @@ export default function ServicesGrid() {
                   initial={{ opacity:0, x: ci%2===0?-300:300, filter:'blur(6px)' }}
                   animate={inView?{opacity:1,x:0,filter:'blur(0px)'}:{opacity:0,x:ci%2===0?-300:300,filter:'blur(6px)'}}
                   transition={{ type:'spring', stiffness:85, damping:17, delay: li*0.25+ci*0.03 }}
-                >{ch===' '?' ':ch}</motion.span>
+                >{ch===' '?' ':ch}</motion.span>
               ))}
             </div>
           ))}
@@ -151,27 +151,55 @@ function ServiceCard({ svc, index, dragDist }: { svc: (typeof SERVICES)[0]; inde
       onMouseLeave={()=>{ inside.current=false; tx.current=0; ty.current=0; if(raf.current) cancelAnimationFrame(raf.current); raf.current=requestAnimationFrame(spring) }}
     >
       <Link href={`/${svc.slug}`} draggable={false} data-cursor-hover
-        className="block h-full border border-[var(--gold-border)] hover:border-[var(--gold-border-h)] transition-colors duration-300 relative overflow-hidden bg-[rgba(15,12,18,0.7)] backdrop-blur-sm group"
+        className="block h-full border border-[var(--gold-border)] hover:border-[var(--gold-border-h)] transition-colors duration-300 relative overflow-hidden group"
+        style={{ background: '#0A0A0C' }}
       >
         <div ref={shineRef} className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
           style={{ background:'radial-gradient(280px circle at var(--sx,50%) var(--sy,50%), rgba(201,168,76,0.1), transparent 70%)' }} />
         <div className="p-6 relative z-10">
+
+          {/* Icon + numbered badge */}
           <div className="flex justify-between items-start mb-5">
             <span className="text-2xl">{svc.icon}</span>
-            <span className="font-[var(--font-cinzel)] font-black text-[3.5rem] leading-none" style={{ color:'rgba(201,168,76,0.07)' }}>
+            <span
+              className="font-[var(--font-cinzel)] font-black text-[3rem] leading-none"
+              style={{ color: 'rgba(201,168,76,0.25)' }}
+            >
               {String(index+1).padStart(2,'0')}
             </span>
           </div>
-          <h3 className="font-[var(--font-cinzel)] font-bold text-[1rem] tracking-[0.04em] mb-2">{svc.name}</h3>
-          <p className="font-[var(--font-cormorant)] font-light text-[0.88rem] leading-[1.7] text-[var(--cream-dim)] mb-4">{svc.tagline}</p>
+
+          {/* Service title */}
+          <h3
+            className="font-[var(--font-cinzel)] font-semibold tracking-[0.04em] mb-2 text-[1.375rem] max-sm:text-[1.125rem]"
+            style={{ color: '#F5F0E8' }}
+          >
+            {svc.name}
+          </h3>
+
+          {/* Tagline */}
+          <p
+            className="font-[var(--font-cormorant)] font-light leading-[1.6] mb-4 text-[1rem] max-sm:text-[0.875rem]"
+            style={{ color: 'rgba(245,240,232,0.80)' }}
+          >
+            {svc.tagline}
+          </p>
 
           {/* Format / package tags */}
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {formatTags.slice(0,3).map(item=>(
-              <span key={item.id} className="font-[var(--font-mono)] text-[0.37rem] tracking-[0.18em] px-2 py-1 border border-[var(--gold-border)] text-[var(--cream-ghost)] uppercase">{item.name}</span>
+            {formatTags.slice(0,3).map(item => (
+              <span
+                key={item.id}
+                className="font-[var(--font-mono)] text-[11px] tracking-[0.08em] px-[10px] py-[4px] uppercase"
+                style={{ border: '1px solid rgba(201,168,76,0.45)', color: 'var(--gold)' }}
+              >
+                {item.name}
+              </span>
             ))}
             {formatTags.length > 3 && (
-              <span className="font-[var(--font-mono)] text-[0.37rem] tracking-[0.18em] px-2 py-1 text-[var(--gold)] uppercase">+{formatTags.length-3} more</span>
+              <span className="font-[var(--font-mono)] text-[11px] tracking-[0.08em] px-[10px] py-[4px] text-[var(--gold)] uppercase">
+                +{formatTags.length-3} more
+              </span>
             )}
           </div>
 
@@ -179,17 +207,36 @@ function ServiceCard({ svc, index, dragDist }: { svc: (typeof SERVICES)[0]; inde
           {svc.subServices && svc.subServices.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-4 pt-2.5 border-t border-[var(--gold-border)]">
               {svc.subServices.map(name => (
-                <span key={name} className="font-[var(--font-mono)] text-[0.37rem] tracking-[0.18em] px-2 py-1 border border-[rgba(201,168,76,0.3)] text-[var(--gold)] uppercase">{name}</span>
+                <span
+                  key={name}
+                  className="font-[var(--font-mono)] text-[11px] tracking-[0.08em] px-[10px] py-[4px] uppercase"
+                  style={{ border: '1px solid rgba(201,168,76,0.45)', color: 'var(--gold)' }}
+                >
+                  {name}
+                </span>
               ))}
             </div>
           )}
           {!svc.subServices && <div className="mb-4" />}
 
+          {/* Explore CTA */}
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 border border-[var(--gold-border)] rounded-full flex items-center justify-center text-[var(--gold)] text-xs group-hover:bg-[var(--gold)] group-hover:text-black transition-all duration-300">→</div>
-            <span className="font-[var(--font-mono)] text-[0.42rem] tracking-[0.22em] text-[var(--cream-dim)] uppercase">Explore</span>
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--gold)] text-xs group-hover:bg-[var(--gold)] group-hover:text-black transition-all duration-300"
+              style={{ border: '1px solid rgba(201,168,76,0.4)' }}
+            >
+              →
+            </div>
+            <span
+              className="font-[var(--font-mono)] text-[12px] tracking-[0.22em] uppercase"
+              style={{ color: 'rgba(245,240,232,0.90)' }}
+            >
+              Explore
+            </span>
           </div>
         </div>
+
+        {/* Gold underline on hover */}
         <motion.div className="absolute bottom-0 left-0 h-[1.5px] bg-gradient-to-r from-[var(--gold)] to-[var(--gold-l)]"
           initial={{ width:0 }} whileHover={{ width:'100%' }}
           transition={{ duration:0.4, ease:[0.22,1,0.36,1] }}
