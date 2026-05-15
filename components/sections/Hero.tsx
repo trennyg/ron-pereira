@@ -78,14 +78,13 @@ export default function Hero() {
       // Opacity + position reveal — same ticker as curtain/fly in Loader.tsx.
       gsap.fromTo(
         els,
-        { opacity: 0, y: 10 },
+        { opacity: 0 },
         {
           opacity: 1,
-          y: 0,
           duration: 0.18,
           ease: 'power4.out',
           stagger: 0.05,
-          clearProps: 'opacity,transform',
+          clearProps: 'opacity',
         }
       )
 
