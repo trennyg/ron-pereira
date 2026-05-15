@@ -72,8 +72,9 @@ export default function ServicePageClient({ service: svc }: { service: Service }
       <ServiceSwitcher currentSlug={svc.slug} />
       <main>
         <ServiceHero svc={svc} />
-        {svc.acts     && <ActsSection     svc={svc} />}
-        {svc.packages && <PackagesSection  svc={svc} />}
+        {svc.acts        && <ActsSection        svc={svc} />}
+        {svc.subServices && <SubServicesSection svc={svc} />}
+        {svc.packages    && <PackagesSection    svc={svc} />}
         {svc.works    && <WorksSection     svc={svc} />}
         {svc.note     && <NoteSection      note={svc.note} />}
         <MediaSection svc={svc} />
@@ -225,6 +226,79 @@ function ActsSection({ svc }: { svc: Service }) {
                 transition={{ duration: 0.4 }}
               />
             </div>
+            </TiltCard>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/* ──────────────────────────────────────
+   SUB-SERVICES SECTION (Violin, Guitar)
+────────────────────────────────────── */
+function SubServicesSection({ svc }: { svc: Service }) {
+  const ref = useRef(null)
+  const inView = useInView(ref, { once: true, amount: 0.08 })
+
+  return (
+    <section ref={ref} className="section-base relative" style={{ background: 'rgba(6,4,10,0.65)' }}>
+      <div className="section-atmo" />
+
+      <motion.p
+        className="font-[var(--font-mono)] text-[0.52rem] tracking-[0.55em] text-[var(--gold)] uppercase flex items-center gap-4 mb-6"
+        initial={{ opacity: 0, x: -150 }}
+        animate={inView ? { opacity: 0.9, x: 0 } : { opacity: 0, x: -150 }}
+        transition={{ type: 'spring', stiffness: 80, damping: 18 }}
+      >
+        <span className="w-10 h-px bg-[var(--gold)]" />
+        Extended Services
+      </motion.p>
+
+      <h2 className="font-[var(--font-cinzel)] font-black text-[clamp(2rem,4vw,4rem)] mb-12">
+        <motion.span style={{ display: 'inline-block' }}
+          initial={{ opacity: 0, x: '-105vw' }} animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: '-105vw' }}
+          transition={{ type: 'spring', stiffness: 90, damping: 20 }}>Also </motion.span>
+        <motion.span className="gold-shimmer" style={{ display: 'inline-block' }}
+          initial={{ opacity: 0, x: '105vw' }} animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: '105vw' }}
+          transition={{ type: 'spring', stiffness: 90, damping: 20, delay: 0.1 }}>Available</motion.span>
+      </h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {svc.subServices!.map((sub, i) => (
+          <motion.div
+            key={sub.name}
+            initial={{ opacity: 0, y: 60, scale: 0.92 }}
+            animate={inView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 60, scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 80, damping: 18, delay: i * 0.07 }}
+          >
+            <TiltCard>
+              <div
+                className="border border-[var(--gold-border)] hover:border-[var(--gold-border-h)] bg-[rgba(15,12,18,0.6)] p-7 transition-all duration-300 relative overflow-hidden group backdrop-blur-sm h-full"
+                data-cursor-hover
+              >
+                <h3 className="font-[var(--font-cinzel)] font-bold text-[1.15rem] mb-3 tracking-[0.04em]">
+                  {sub.name}
+                </h3>
+                <p className="font-[var(--font-cormorant)] text-[0.92rem] font-light leading-[1.8] text-[var(--cream-dim)] mb-5">
+                  {sub.desc}
+                </p>
+
+                <Link
+                  href={`/#booking?service=${svc.id}&act=${encodeURIComponent(sub.name)}`}
+                  className="inline-flex items-center gap-2 font-[var(--font-mono)] text-[0.44rem] tracking-[0.25em] text-[var(--gold)] uppercase border border-[var(--gold-border)] px-4 py-2 hover:bg-[var(--gold)] hover:text-black transition-all duration-300"
+                  data-cursor-hover
+                >
+                  Book {sub.name} →
+                </Link>
+
+                <motion.div
+                  className="absolute bottom-0 left-0 h-[1.5px] bg-gradient-to-r from-[var(--gold)] to-[var(--gold-l)]"
+                  initial={{ width: 0 }}
+                  whileHover={{ width: '100%' }}
+                  transition={{ duration: 0.4 }}
+                />
+              </div>
             </TiltCard>
           </motion.div>
         ))}

@@ -21,6 +21,11 @@ export type Work = {
   desc:   string
 }
 
+export type SubService = {
+  name: string
+  desc: string
+}
+
 export type Service = {
   id:          string
   slug:        string
@@ -34,8 +39,23 @@ export type Service = {
   works?:      Work[]
   note?:       string
   youtubeIds?: string[]
-  subServices?: string[]
+  subServices?: SubService[]
 }
+
+const SHARED_SUBSERVICES: SubService[] = [
+  {
+    name: 'Music Direction',
+    desc: 'The architect behind the sound. Ron shapes the musical identity of your event — arranging, directing, and coordinating every element from rehearsal to performance.',
+  },
+  {
+    name: 'Music Composition',
+    desc: 'Original music crafted for your moment. Film scores, event themes, custom arrangements — music that lives beyond the occasion.',
+  },
+  {
+    name: 'Mixing & Mastering',
+    desc: 'The difference between a recording and a record. Studio-grade mixing and mastering to make your music sound exactly as it deserves.',
+  },
+]
 
 export const SERVICES: Service[] = [
   {
@@ -54,7 +74,7 @@ export const SERVICES: Service[] = [
       { id:'band',     name:'With Band', desc:'Violin leading a full band setup — rhythm, bass, keys, and percussion. Contemporary, high-energy, and unforgettable for festivals and large events.' },
       { id:'orchestra',name:'Orchestra Direction', desc:'Ron directing an ensemble of up to 40 musicians. The full cinematic experience for galas, weddings of scale, and brand spectacles.' },
     ],
-    subServices: ['Music Direction', 'Music Composition', 'Mixing & Mastering'],
+    subServices: SHARED_SUBSERVICES,
     youtubeIds: ['PLACEHOLDER_1','PLACEHOLDER_2','PLACEHOLDER_3'],
   },
   {
@@ -70,7 +90,7 @@ export const SERVICES: Service[] = [
       { id:'trio',  name:'Trio',     desc:'Guitar-led trio — acoustic or electric. Jazz, contemporary, or Bollywood fusion. Three musicians, one unforgettable sound.' },
       { id:'band',  name:'With Band',desc:'Full band setup with guitar at the centre. Rock, pop, R&B, or fusion. High energy, tight arrangements, and a performance that owns the room.' },
     ],
-    subServices: ['Music Direction', 'Music Composition', 'Mixing & Mastering'],
+    subServices: SHARED_SUBSERVICES,
     youtubeIds: ['PLACEHOLDER_1','PLACEHOLDER_2'],
   },
   {

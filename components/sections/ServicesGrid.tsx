@@ -206,13 +206,13 @@ function ServiceCard({ svc, index, dragDist }: { svc: (typeof SERVICES)[0]; inde
           {/* Sub-service tags — Music Direction, Music Composition, Mixing & Mastering */}
           {svc.subServices && svc.subServices.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-4 pt-2.5 border-t border-[var(--gold-border)]">
-              {svc.subServices.map(name => (
+              {svc.subServices.map(sub => (
                 <span
-                  key={name}
+                  key={sub.name}
                   className="font-[var(--font-mono)] text-[11px] tracking-[0.08em] px-[10px] py-[4px] uppercase"
                   style={{ border: '1px solid rgba(201,168,76,0.45)', color: 'var(--gold)' }}
                 >
-                  {name}
+                  {sub.name}
                 </span>
               ))}
             </div>
