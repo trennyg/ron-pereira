@@ -10,11 +10,8 @@ import Lenis from 'lenis'
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // ── Cause 1 fix: disable browser scroll restoration once on mount ──────────
-  // Next.js App Router does not disable native scroll restoration. The browser
-  // remembers scroll position per URL and restores it after components mount —
-  // AFTER any synchronous Lenis reset, silently overriding it. Setting this
-  // in a dedicated effect runs as early as possible on the client.
+  // Disable browser scroll restoration as early as possible — runs before
+  // the Lenis init effect so the browser cannot restore a saved position.
   useEffect(() => {
     window.history.scrollRestoration = 'manual'
   }, [])
@@ -48,27 +45,46 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // ── Cause 2 + 3 fix: route-change scroll reset with rAF + rootElement ──────
-  // Cause 3: the previous effect ran synchronously — before Lenis is ready on
-  // the new page. Wrapping in rAF defers execution until after the browser
-  // paint so the Lenis instance is fully initialised when scrollTo fires.
+  // ── Route-change scroll reset — stop/reset/start pattern ──────────────────
+  // Root cause of intermittent failure: Lenis runs its own continuous rAF loop.
+  // A single-rAF reset races against Lenis's next tick — sometimes our frame
+  // wins, sometimes Lenis's does, producing non-deterministic behaviour.
   //
-  // Cause 2: if Lenis internally uses a wrapper element rather than window,
-  // window.scrollTo(0,0) has no effect. Resetting lenis.rootElement.scrollTop
-  // directly covers that case. document.documentElement and document.body are
-  // belt-and-braces resets for any remaining edge case.
+  // Fix: stop() halts Lenis's loop so it cannot overwrite the reset.
+  // scrollTo(0, { immediate: true }) clears Lenis's internal target queue.
+  // The double-rAF fires after Lenis's own scheduled tick.
+  // start() resumes only after both frames confirm position is 0.
+  // All four scroll containers are zeroed: window, documentElement,
+  // body, and lenis.rootElement (covers wrapper:window and wrapper:div).
   useEffect(() => {
+    const lenis: any = (globalThis as any).__lenis
+
+    // Step 1: halt Lenis's RAF loop — it cannot overwrite the reset
+    lenis?.stop()
+
+    // Step 2: zero every scroll container immediately
+    window.scrollTo(0, 0)
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+    if (lenis?.rootElement) {
+      lenis.rootElement.scrollTop = 0
+    }
+
+    // Step 3: clear Lenis's internal scroll target queue
+    lenis?.scrollTo(0, { immediate: true })
+
+    // Step 4 + 5: double-rAF fires after Lenis's own scheduled tick,
+    // re-zeros everything, then resumes Lenis
     const rafId = requestAnimationFrame(() => {
-      const lenis: any = (globalThis as any).__lenis
-      if (lenis) {
-        lenis.scrollTo(0, { immediate: true })
-        if (lenis.rootElement) {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0)
+        document.documentElement.scrollTop = 0
+        document.body.scrollTop = 0
+        if (lenis?.rootElement) {
           lenis.rootElement.scrollTop = 0
         }
-      }
-      window.scrollTo(0, 0)
-      document.documentElement.scrollTop = 0
-      document.body.scrollTop = 0
+        lenis?.start()
+      })
     })
 
     return () => cancelAnimationFrame(rafId)
