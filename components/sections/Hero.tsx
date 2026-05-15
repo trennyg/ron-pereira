@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 
@@ -20,16 +21,9 @@ const STATS = [
 const HIDDEN: React.CSSProperties = { opacity: 0 }
 const STAT_ITEM_HIDDEN: React.CSSProperties = { opacity: 0 }
 
-// Vanilla rAF counter — runs on the browser's native vsync scheduling,
-// completely independent of GSAP's internal ticker. On iOS Safari, GSAP's
-// ticker can be starved when GPU-heavy GSAP animations (curtain/fly) are
-// running on the same thread budget, causing mid-count freezes. A direct
-// requestAnimationFrame call cannot be stalled by other GSAP work.
-//
-// Delta-clamped: each frame can advance elapsed by at most 16ms regardless
-// of how long iOS suspended rAF. Without clamping, a 1000ms suspension
-// causes progress ≈ 1 on resumption and the entire count is skipped.
-// Ease-out exponential: 1 - 2^(-10t) — fast start, decelerates to a stop.
+// Vanilla rAF counter — independent of GSAP's ticker.
+// Delta-clamped to 16ms per frame so iOS rAF suspension (800ms–1500ms)
+// cannot skip the animation by producing progress ≈ 1 on resumption.
 function animateCounter(
   span: HTMLElement,
   target: number,
@@ -43,23 +37,20 @@ function animateCounter(
   let elapsed = 0
 
   function tick(now: number): void {
-    // Spin until delay elapses — no setTimeout needed.
     if (now < startAt) {
       requestAnimationFrame(tick)
       return
     }
 
     if (lastTime === null) {
-      // First real tick after delay — initialise clock, don't advance yet.
       lastTime = now
       requestAnimationFrame(tick)
       return
     }
 
-    // Clamp frame delta to 16ms max.
-    // If iOS suspended rAF for 800ms, this tick advances elapsed by only
-    // 16ms instead of 800ms — animation continues from exactly where it
-    // left off rather than jumping to the final value.
+    // Clamp: a suspended-then-resumed rAF on iOS reports a large `now - lastTime`.
+    // Clamping to 16ms means the animation continues from where it left off
+    // rather than jumping to the final value.
     const delta = Math.min(now - lastTime, 16)
     lastTime = now
     elapsed += delta
@@ -71,7 +62,6 @@ function animateCounter(
     if (progress < 1) {
       requestAnimationFrame(tick)
     } else {
-      // Guarantee exact final string — no rounding edge cases.
       span.textContent = original
       span.style.color = ''
       span.classList.add('gold-shimmer')
@@ -90,10 +80,7 @@ export default function Hero() {
   const socialsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // ── rp:loader-done — opacity reveal + gold-shimmer prep ──────────────────
-    // Fired from Loader.tsx when the fly elements are reparented and the
-    // hero content becomes visible. Handles the opacity animation only —
-    // counters are deliberately split to the hero:ready event below.
+    // rp:loader-done — opacity reveal + gold-shimmer prep (no counters)
     const revealHandler = () => {
       setHeroReady(true)
 
@@ -101,10 +88,6 @@ export default function Hero() {
         ? (Array.from(statsRef.current.children) as HTMLElement[])
         : []
 
-      // Swap gold-shimmer → plain colour on each stat number span NOW,
-      // before any counter writes. -webkit-background-clip:text forces a
-      // full GPU repaint on every textContent change; plain colour does not.
-      // Gold-shimmer is restored inside animateCounter's completion callback.
       statItems.forEach((item, idx) => {
         const span = item.children[0] as HTMLElement
         if (!span) return
@@ -124,24 +107,11 @@ export default function Hero() {
       gsap.fromTo(
         els,
         { opacity: 0 },
-        {
-          opacity: 1,
-          duration: 0.18,
-          ease: 'power4.out',
-          stagger: 0.05,
-          clearProps: 'opacity',
-        }
+        { opacity: 1, duration: 0.18, ease: 'power4.out', stagger: 0.05, clearProps: 'opacity' }
       )
     }
 
-    // ── hero:ready — vanilla rAF counters ────────────────────────────────────
-    // Fired from Loader.tsx at t=Phase3Start+1100ms, guaranteed AFTER:
-    //   • bgRef GSAP tween completes   (1000ms < 1100ms) ✓
-    //   • grainRef GSAP tween completes (800ms < 1100ms) ✓
-    //   • rp:loader-done has fired      (900ms < 1100ms) ✓
-    //   • Hero content is visible       (opacity reveal done) ✓
-    // Zero active GSAP animations remain at this point — no ticker
-    // contention with animateCounter's independent rAF loop.
+    // hero:ready — vanilla rAF counters, starts after all Loader GSAP work done
     const counterHandler = () => {
       if (!statsRef.current) return
       const statItems = Array.from(statsRef.current.children) as HTMLElement[]
@@ -150,13 +120,9 @@ export default function Hero() {
         const span = item.children[0] as HTMLElement
         const stat = STATS[idx]
         if (!span || !stat) return
-
-        const target   = parseInt(stat.n, 10)
-        const suffix   = stat.n.replace(/[0-9]/g, '')
+        const target = parseInt(stat.n, 10)
+        const suffix = stat.n.replace(/[0-9]/g, '')
         if (isNaN(target)) return
-
-        // Stagger each counter by 150ms so they cascade visibly.
-        // animateCounter uses its own rAF loop — iOS vsync cannot throttle it.
         animateCounter(span, target, suffix, stat.n, 1400, idx * 150)
       })
     }
@@ -178,12 +144,29 @@ export default function Hero() {
       className="relative min-h-[100svh] flex flex-col justify-end overflow-hidden isolate"
     >
 
-      {/* Cover photo — Ken Burns (Framer Motion, unchanged) */}
+      {/* Cover photo — Next.js Image with priority (SUSPECT 6 FIX).
+          Previously a CSS backgroundImage on a motion.div: no preload hint
+          was sent to the browser, so iOS decoded the JPEG synchronously when
+          Phase 3 made it visible, blocking the main thread for 200–500ms.
+          priority={true} causes Next.js to inject <link rel="preload"> in
+          <head> so the image is fetched and decoded before first paint. */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <motion.div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage:'url(/images/hero-cover.jpg)', backgroundColor:'#1A0800', mixBlendMode:'screen' as const, opacity:0.9 }}
-          initial={{ scale:1.12 }} animate={{ scale:1.04 }}
-          transition={{ duration:18, ease:'linear', repeat:Infinity, repeatType:'reverse' }} />
+        <motion.div
+          className="absolute inset-0"
+          style={{ backgroundColor: '#1A0800', mixBlendMode: 'screen' as const }}
+          initial={{ scale: 1.12 }}
+          animate={{ scale: 1.04 }}
+          transition={{ duration: 18, ease: 'linear', repeat: Infinity, repeatType: 'reverse' }}
+        >
+          <Image
+            src="/images/hero-cover.jpg"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            style={{ objectFit: 'cover', objectPosition: 'center', opacity: 0.9 }}
+          />
+        </motion.div>
         <div className="absolute inset-0" style={{ background:'linear-gradient(180deg,rgba(8,5,2,0.08) 0%,rgba(8,5,2,0) 25%,rgba(8,5,2,0.6) 72%,rgba(8,5,2,0.98) 100%)' }} />
         <div className="absolute inset-0" style={{ background:'linear-gradient(90deg,rgba(8,5,2,0.65) 0%,transparent 55%)' }} />
         <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 80% 60% at 65% 45%,rgba(160,80,10,0.22),transparent 70%)' }} />
@@ -199,11 +182,10 @@ export default function Hero() {
           Mumbai &nbsp;·&nbsp; Available Worldwide
         </p>
 
-        {/* RON PEREIRA layout placeholder.
-            opacity:0 inline — permanently invisible. The visible name is the
-            travelling element reparented here by Loader after the bg dissolves.
-            Text is present so the div has the correct font-metric height,
-            keeping tagline/stats/socials at the right positions. */}
+        {/* RON PEREIRA layout placeholder — permanently invisible.
+            Provides font-metric height so tagline/stats/socials are
+            positioned correctly while the travelling fly elements are the
+            visible name. */}
         <div
           data-hero-slot
           aria-hidden="true"
@@ -228,9 +210,6 @@ export default function Hero() {
         >
           {STATS.map(s => (
             <div key={s.n} style={STAT_ITEM_HIDDEN}>
-              {/* will-change:contents keeps the text layer on its own
-                  compositing layer on iOS so counter repaints are isolated
-                  from the rest of the hero subtree. */}
               <span
                 className="font-[var(--font-cinzel)] font-black gold-shimmer block leading-none"
                 style={{ fontSize:'2rem', willChange:'contents' }}
@@ -257,7 +236,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Scroll hint — Framer Motion, driven by heroReady (unchanged) */}
+      {/* Scroll hint — Framer Motion, driven by heroReady */}
       <motion.div
         className="absolute bottom-8 right-12 flex flex-col items-center gap-2 max-md:hidden"
         initial={{ opacity: 0 }}

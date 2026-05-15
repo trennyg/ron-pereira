@@ -17,10 +17,16 @@ export default function Loader({ onComplete }: LoaderProps) {
   const barRef       = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // aborted = true in cleanup prevents stale async continuations firing
-    // after the component unmounts (e.g. fast navigation or dev hot-reload).
     let aborted = false
     const flyEls: HTMLElement[] = []
+
+    // ── SUSPECT 2 FIX — fonts.ready started at init, not mid-sequence ────────
+    // Previously awaited inside the t5 async callback at t=2800ms. On iOS
+    // with a slow connection, Cinzel hadn't loaded by then, silently blocking
+    // the entire fly animation for ~1s (the visible "freeze after loader done").
+    // Starting the Promise here means it resolves during the curtain animation
+    // (1.78s). By t=2800ms it is already settled — await is instant.
+    const fontsReadyPromise = document.fonts.ready
 
     // ── CURTAINS ─────────────────────────────────────────────────────────────
     gsap.set(leftRef.current,  { transformOrigin: 'left center' })
@@ -52,11 +58,9 @@ export default function Loader({ onComplete }: LoaderProps) {
     }, 1000)
 
     // ── THREE-PHASE FLY ───────────────────────────────────────────────────────
-    // async callback — two sequential layout-settle gates before any rect is
-    // measured. Both typically resolve synchronously from cache at t=2800ms.
     const t5 = setTimeout(async () => {
 
-      // ── Gate 1: hero-cover.jpg must be loaded ─────────────────────────────
+      // ── Gate 1: hero-cover.jpg loaded ────────────────────────────────────
       const coverImg = new Image()
       coverImg.src = '/images/hero-cover.jpg'
       if (!coverImg.complete) {
@@ -66,10 +70,17 @@ export default function Loader({ onComplete }: LoaderProps) {
         })
       }
 
-      // ── Gate 2: Cinzel must be rendered at its final metrics ───────────────
-      // getComputedStyle reads are only valid once fonts are loaded; otherwise
-      // the browser may return fallback-font metrics and the FLIP will mis-size.
-      await document.fonts.ready
+      // ── Gate 1b: image decoded off the main thread ───────────────────────
+      // Decoding a large JPEG synchronously during Phase 3 (when the bg fades
+      // and the cover photo becomes visible) blocks iOS for 200–500ms.
+      // img.decode() initiates decoding before Phase 3 starts so it is ready.
+      try { await coverImg.decode() } catch (_) { /* not supported in all browsers */ }
+
+      // ── Gate 2: fonts — instant because started at init ───────────────────
+      // fontsReadyPromise was created at the top of this useEffect so it
+      // resolves during the curtain animation. This await is a no-op on
+      // desktop and fast connections; on slow iOS it no longer blocks here.
+      await fontsReadyPromise
 
       if (aborted) return
 
@@ -77,8 +88,6 @@ export default function Loader({ onComplete }: LoaderProps) {
       gsap.to(subtitleRef.current,  { opacity: 0, duration: 0.25, ease: 'none' })
 
       const nameEl  = nameRef.current
-      // slotEl is the invisible layout placeholder in Hero — its children hold
-      // the correct Cinzel text metrics and are the reparent target.
       const slotEl  = document.querySelector<HTMLElement>('[data-hero-slot]')
 
       if (!nameEl || !slotEl || !slotEl.children[0] || !slotEl.children[1]) {
@@ -86,8 +95,6 @@ export default function Loader({ onComplete }: LoaderProps) {
           window.dispatchEvent(new CustomEvent('rp:loader-done'))
           gsap.to(bgRef.current,    { opacity: 0, duration: 0.55 })
           gsap.to(grainRef.current, { opacity: 0, duration: 0.4  })
-          // hero:ready fires after the Loader's GSAP work is done so counters
-          // in Hero.tsx never compete with any active GSAP animation on iOS.
           setTimeout(() => {
             if (aborted) return
             window.dispatchEvent(new CustomEvent('hero:ready'))
@@ -97,18 +104,15 @@ export default function Loader({ onComplete }: LoaderProps) {
         return
       }
 
-      // ── Read exact font metrics from the hero slot ─────────────────────────
-      // getComputedStyle gives resolved values (px not clamp/em) after Cinzel
-      // has loaded. Every typographic property is copied to the fly elements so
-      // they are pixel-identical to what the slot would render at.
-      const cs = window.getComputedStyle(slotEl.children[0] as HTMLElement)
-
-      // Loader spans are inline — getBoundingClientRect gives tight text bounds.
+      // ── SUSPECT 1 FIX — batch DOM reads, then yield before fly setup ──────
+      // getComputedStyle + 5× getBoundingClientRect/Range force layout recalcs.
+      // Batching all reads together (no writes between) means iOS only
+      // recalculates layout once. The rAF yield after gives iOS a frame to
+      // process those recalcs before we start creating elements and tweens.
+      const cs      = window.getComputedStyle(slotEl.children[0] as HTMLElement)
       const ronFrom = (nameEl.children[0] as HTMLElement).getBoundingClientRect()
       const perFrom = (nameEl.children[1] as HTMLElement).getBoundingClientRect()
 
-      // Hero slot spans are display:block — Range API gives text content bounds
-      // (not the full container width that getBoundingClientRect would return).
       function textRect(el: HTMLElement): DOMRect {
         const r = document.createRange()
         r.selectNodeContents(el)
@@ -119,16 +123,15 @@ export default function Loader({ onComplete }: LoaderProps) {
       const toRON = textRect(slotEl.children[0] as HTMLElement)
       const toPER = textRect(slotEl.children[1] as HTMLElement)
 
+      // Yield one frame — iOS processes the batched layout recalcs here
+      // before we begin creating DOM elements and GSAP animations.
+      await new Promise<void>(r => requestAnimationFrame(r))
+      if (aborted) return
+
       const loaderScale = ronFrom.height / toRON.height
 
-      // Fade loader name as body-level fly elements take over
       gsap.to(nameEl, { opacity: 0, duration: 0.25, ease: 'none' })
 
-      // ── Create fly elements with exact hero-slot computed styles ───────────
-      // Using getComputedStyle values (not hardcoded CSS) guarantees the fly
-      // renders identically to the slot text — same pixels, no shift on arrival.
-      // For PEREIRA: add gold-shimmer class (CSS handles the gradient + animation).
-      // For RON: set color directly to var(--cream) resolved value.
       function makeFly(text: string, rect: DOMRect, isGold: boolean): HTMLElement {
         const el = document.createElement('span')
         el.setAttribute('aria-hidden', 'true')
@@ -152,7 +155,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         if (isGold) {
           el.classList.add('gold-shimmer')
         } else {
-          el.style.color = '#F0EDE8' // var(--cream)
+          el.style.color = '#F0EDE8'
         }
         document.body.appendChild(el)
         flyEls.push(el)
@@ -162,14 +165,11 @@ export default function Loader({ onComplete }: LoaderProps) {
       const ronFly = makeFly('RON',     toRON, false)
       const perFly = makeFly('PEREIRA', toPER, true)
 
-      // Text centres (for horizontal alignment in the FLIP math)
       const ronFromCx = ronFrom.left + ronFrom.width  / 2
       const perFromCx = perFrom.left + perFrom.width  / 2
       const toRONCx   = toRON.left   + toRON.width    / 2
       const toPERCx   = toPER.left   + toPER.width    / 2
 
-      // FLIP: transform each fly so it visually appears at its loader position.
-      // opacity:1 set in the same synchronous gsap.set — no stray paint.
       gsap.set(ronFly, {
         opacity: 1, x: ronFromCx - toRONCx, y: ronFrom.top - toRON.top,
         scale: loaderScale, transformOrigin: 'top center',
@@ -179,7 +179,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         scale: loaderScale, transformOrigin: 'top center',
       })
 
-      // ── Phase 1: PEREIRA drops below RON (RON stays put) ──
+      // ── Phase 1: PEREIRA drops below RON ──
       gsap.to(perFly, {
         x: ronFromCx - toPERCx,
         y: ronFrom.bottom - toPER.top,
@@ -189,11 +189,6 @@ export default function Loader({ onComplete }: LoaderProps) {
         onComplete() {
           if (aborted) return
 
-          // ── Re-anchor fly elements to current slot position ───────────────
-          // Re-measure immediately before Phase 2 so any scroll that occurred
-          // during Phase 1 (350ms) is reflected. Update fly CSS top/left and
-          // compensate GSAP x/y by the same delta — visual position unchanged,
-          // but Phase 2's {x:0,y:0} target resolves to the current slot rect.
           const freshRON = textRect(slotEl.children[0] as HTMLElement)
           const freshPER = textRect(slotEl.children[1] as HTMLElement)
 
@@ -220,17 +215,9 @@ export default function Loader({ onComplete }: LoaderProps) {
             onComplete() {
               if (aborted) return
 
-              // ── Phase 3: Loader overlay dissolves — fly IS the name ─────────
-              // Fly elements are at the hero position and VISIBLE. Do not touch
-              // them. The loader bg dissolves around them while they act as
-              // the name. power2.out: fast initial fade that eases to a stop.
               gsap.to(bgRef.current,    { opacity: 0, duration: 1.0, ease: 'power2.out' })
               gsap.to(grainRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
 
-              // ── Reparent at bg≈0 + dispatch rp:loader-done ───────────────
-              // At 900ms, power2.out has faded the bg to ~0.01 — effectively
-              // gone. Reparent both fly elements from document.body into the
-              // hero section as position:absolute so they scroll with the page.
               setTimeout(() => {
                 if (aborted) return
                 requestAnimationFrame(() => {
@@ -252,11 +239,8 @@ export default function Loader({ onComplete }: LoaderProps) {
                 })
               }, 900)
 
-              // ── hero:ready — fires after ALL Loader GSAP work is done ─────
-              // bgRef (1.0s) and grainRef (0.8s) both complete before this
-              // fires at 1100ms. Zero active GSAP animations remain when
-              // Hero.tsx's vanilla rAF counters begin — no ticker contention,
-              // no mid-count freezes on iOS Safari.
+              // hero:ready fires after ALL Loader GSAP work is done.
+              // bgRef (1.0s) and grainRef (0.8s) complete before 1100ms.
               setTimeout(() => {
                 if (aborted) return
                 window.dispatchEvent(new CustomEvent('hero:ready'))
@@ -284,15 +268,11 @@ export default function Loader({ onComplete }: LoaderProps) {
     }
   }, [onComplete])
 
-  // Static render — Loader never re-renders after mount.
-  // All opacity/transform changes are imperative via the refs above.
   return (
     <div className="fixed inset-0 z-[9000] overflow-hidden pointer-events-none">
 
-      {/* Dark background */}
       <div ref={bgRef} className="absolute inset-0" style={{ background: '#06040A' }} />
 
-      {/* Grain */}
       <div ref={grainRef} className="absolute inset-0 pointer-events-none"
         style={{ background:'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.18) 2px,rgba(0,0,0,0.18) 3px)', zIndex:1 }} />
 
@@ -332,7 +312,7 @@ export default function Loader({ onComplete }: LoaderProps) {
           style={{ background:'linear-gradient(90deg,rgba(0,0,0,0.92) 0%,rgba(55,8,32,0.55) 35%,transparent 100%)' }} />
       </div>
 
-      {/* SPOTLIGHT — opacity driven by RAF */}
+      {/* SPOTLIGHT */}
       <div ref={spotlightRef} className="absolute inset-0 z-10 pointer-events-none"
         style={{ opacity: 0 }}>
         <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"
@@ -353,7 +333,7 @@ export default function Loader({ onComplete }: LoaderProps) {
             background:'radial-gradient(ellipse,rgba(255,248,230,0.07) 0%,transparent 65%)' }} />
       </div>
 
-      {/* RON PEREIRA — opacity driven by RAF */}
+      {/* RON PEREIRA */}
       <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none px-6">
         <div ref={nameRef}
           className="font-[var(--font-cinzel)] font-black text-center"
@@ -370,7 +350,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         </div>
       </div>
 
-      {/* Subtitle + progress bar — opacity driven by RAF */}
+      {/* Subtitle + progress bar */}
       <div ref={subtitleRef}
         className="absolute z-20 flex flex-col items-center w-full pointer-events-none"
         style={{ top:'calc(50% + clamp(1.8rem,4vw,2.8rem))', opacity: 0 }}>
