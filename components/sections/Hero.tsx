@@ -30,11 +30,7 @@ const HIDDEN: React.CSSProperties = {
 // opacity when willChange is present — each item needs its own opacity:0
 // so it is invisible even if the compositor draws it before the parent
 // opacity cascades.
-const STAT_ITEM_HIDDEN: React.CSSProperties = {
-  opacity: 0,
-  transform: 'translateY(10px)',
-  willChange: 'opacity, transform',
-}
+const STAT_ITEM_HIDDEN: React.CSSProperties = { opacity: 0 }
 
 export default function Hero() {
   // heroReady still drives the scroll hint (motion.div below)
