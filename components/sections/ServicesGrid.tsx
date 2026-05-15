@@ -76,7 +76,7 @@ export default function ServicesGrid() {
                   initial={{ opacity:0, x: ci%2===0?-300:300, filter:'blur(6px)' }}
                   animate={inView?{opacity:1,x:0,filter:'blur(0px)'}:{opacity:0,x:ci%2===0?-300:300,filter:'blur(6px)'}}
                   transition={{ type:'spring', stiffness:85, damping:17, delay: li*0.25+ci*0.03 }}
-                >{ch===' '?'\u00A0':ch}</motion.span>
+                >{ch===' '?' ':ch}</motion.span>
               ))}
             </div>
           ))}
@@ -143,6 +143,8 @@ function ServiceCard({ svc, index, dragDist }: { svc: (typeof SERVICES)[0]; inde
     raf.current = requestAnimationFrame(spring)
   }
 
+  const formatTags = svc.acts ?? svc.packages ?? []
+
   return (
     <div ref={cardRef} style={{ flex:'0 0 255px', transform:tilt, transformStyle:'preserve-3d', willChange:'transform' }}
       onMouseMove={onMouseMove} onMouseEnter={()=>{inside.current=true}}
@@ -162,14 +164,27 @@ function ServiceCard({ svc, index, dragDist }: { svc: (typeof SERVICES)[0]; inde
           </div>
           <h3 className="font-[var(--font-cinzel)] font-bold text-[1rem] tracking-[0.04em] mb-2">{svc.name}</h3>
           <p className="font-[var(--font-cormorant)] font-light text-[0.88rem] leading-[1.7] text-[var(--cream-dim)] mb-4">{svc.tagline}</p>
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {(svc.acts??svc.packages??[]).slice(0,3).map(item=>(
+
+          {/* Format / package tags */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {formatTags.slice(0,3).map(item=>(
               <span key={item.id} className="font-[var(--font-mono)] text-[0.37rem] tracking-[0.18em] px-2 py-1 border border-[var(--gold-border)] text-[var(--cream-ghost)] uppercase">{item.name}</span>
             ))}
-            {((svc.acts??svc.packages??[]).length>3)&&(
-              <span className="font-[var(--font-mono)] text-[0.37rem] tracking-[0.18em] px-2 py-1 text-[var(--gold)] uppercase">+{(svc.acts??svc.packages??[]).length-3} more</span>
+            {formatTags.length > 3 && (
+              <span className="font-[var(--font-mono)] text-[0.37rem] tracking-[0.18em] px-2 py-1 text-[var(--gold)] uppercase">+{formatTags.length-3} more</span>
             )}
           </div>
+
+          {/* Sub-service tags — Music Direction, Music Composition, Mixing & Mastering */}
+          {svc.subServices && svc.subServices.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4 pt-2.5 border-t border-[var(--gold-border)]">
+              {svc.subServices.map(name => (
+                <span key={name} className="font-[var(--font-mono)] text-[0.37rem] tracking-[0.18em] px-2 py-1 border border-[rgba(201,168,76,0.3)] text-[var(--gold)] uppercase">{name}</span>
+              ))}
+            </div>
+          )}
+          {!svc.subServices && <div className="mb-4" />}
+
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 border border-[var(--gold-border)] rounded-full flex items-center justify-center text-[var(--gold)] text-xs group-hover:bg-[var(--gold)] group-hover:text-black transition-all duration-300">→</div>
             <span className="font-[var(--font-mono)] text-[0.42rem] tracking-[0.22em] text-[var(--cream-dim)] uppercase">Explore</span>

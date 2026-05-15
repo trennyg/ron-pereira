@@ -34,6 +34,7 @@ export type Service = {
   works?:      Work[]
   note?:       string
   youtubeIds?: string[]
+  subServices?: string[]
 }
 
 export const SERVICES: Service[] = [
@@ -53,6 +54,7 @@ export const SERVICES: Service[] = [
       { id:'band',     name:'With Band', desc:'Violin leading a full band setup — rhythm, bass, keys, and percussion. Contemporary, high-energy, and unforgettable for festivals and large events.' },
       { id:'orchestra',name:'Orchestra Direction', desc:'Ron directing an ensemble of up to 40 musicians. The full cinematic experience for galas, weddings of scale, and brand spectacles.' },
     ],
+    subServices: ['Music Direction', 'Music Composition', 'Mixing & Mastering'],
     youtubeIds: ['PLACEHOLDER_1','PLACEHOLDER_2','PLACEHOLDER_3'],
   },
   {
@@ -68,39 +70,8 @@ export const SERVICES: Service[] = [
       { id:'trio',  name:'Trio',     desc:'Guitar-led trio — acoustic or electric. Jazz, contemporary, or Bollywood fusion. Three musicians, one unforgettable sound.' },
       { id:'band',  name:'With Band',desc:'Full band setup with guitar at the centre. Rock, pop, R&B, or fusion. High energy, tight arrangements, and a performance that owns the room.' },
     ],
+    subServices: ['Music Direction', 'Music Composition', 'Mixing & Mastering'],
     youtubeIds: ['PLACEHOLDER_1','PLACEHOLDER_2'],
-  },
-  {
-    id:          'music-direction',
-    slug:        'music-direction',
-    name:        'Music Direction',
-    tagline:     'The architect behind the sound',
-    desc:        'Ron has served as music director and co-director across a wide range of productions — from large-scale corporate galas to theatrical performances, film scores, and live events. He brings complete musical vision from concept to performance.',
-    icon:        '🎼',
-    accentColor: '#C9A84C',
-    works: [
-      { id:'w1', title:'[Production Name]', role:'Music Director',    year:'2024', client:'[Client Name]', desc:'Placeholder — Ron\'s real work goes here.' },
-      { id:'w2', title:'[Production Name]', role:'Co-Music Director', year:'2023', client:'[Client Name]', desc:'Placeholder — Ron\'s real work goes here.' },
-      { id:'w3', title:'[Production Name]', role:'Music Director',    year:'2023', client:'[Client Name]', desc:'Placeholder — Ron\'s real work goes here.' },
-      { id:'w4', title:'[Production Name]', role:'Music Director',    year:'2022', client:'[Client Name]', desc:'Placeholder — Ron\'s real work goes here.' },
-    ],
-    youtubeIds: ['PLACEHOLDER_1'],
-  },
-  {
-    id:          'music-composition',
-    slug:        'music-composition',
-    name:        'Music Composition',
-    tagline:     'Original music that lives beyond the moment',
-    desc:        'Ron composes and co-composes original music across genres — film scores, event themes, brand anthems, and concert works. Every composition is built to outlast the occasion it was written for.',
-    icon:        '📝',
-    accentColor: '#C9A84C',
-    works: [
-      { id:'w1', title:'[Composition Title]', role:'Composer',         year:'2024', client:'[Client/Project]', desc:'Placeholder — real composition details go here.' },
-      { id:'w2', title:'[Composition Title]', role:'Co-Composer',      year:'2023', client:'[Client/Project]', desc:'Placeholder — real composition details go here.' },
-      { id:'w3', title:'[Composition Title]', role:'Arranger',         year:'2023', client:'[Client/Project]', desc:'Placeholder — real composition details go here.' },
-      { id:'w4', title:'[Composition Title]', role:'Composer',         year:'2022', client:'[Client/Project]', desc:'Placeholder — real composition details go here.' },
-    ],
-    youtubeIds: ['PLACEHOLDER_1'],
   },
   {
     id:          'teaching',
@@ -159,67 +130,6 @@ export const SERVICES: Service[] = [
         price:'₹3,000 / session',
         desc:'For students stepping into professional performance. Stage presence, set design, audience interaction, and the mental game of live music.',
         items:['Stage presence coaching','Set list curation','First gig preparation','Industry navigation'],
-      },
-    ],
-  },
-  {
-    id:          'mixing-mastering',
-    slug:        'mixing-mastering',
-    name:        'Mixing & Mastering',
-    tagline:     'The difference between a recording and a record',
-    desc:        'Ron has worked closely with sound engineers across a range of recording and post-production projects. Through Relentless AI\'s network, we can arrange experienced sound engineers for mixing and mastering — from demo recordings to full studio productions.',
-    icon:        '🎚️',
-    accentColor: '#C9A84C',
-    note:        'This service is facilitated through our network of professional sound engineers. Ron acts as creative director, ensuring the final sound aligns with the artistic vision of the project.',
-    works: [
-      { id:'w1', title:'[Project Name]', role:'Creative Director / A&R', year:'2024', client:'[Artist Name]', desc:'Placeholder — real project goes here.' },
-      { id:'w2', title:'[Project Name]', role:'Creative Direction',       year:'2023', client:'[Artist Name]', desc:'Placeholder — real project goes here.' },
-    ],
-    youtubeIds: ['PLACEHOLDER_1'],
-  },
-  {
-    id:          'artist-management',
-    slug:        'artist-management',
-    name:        'Artist Management',
-    tagline:     'We don\'t just manage artists. We build careers.',
-    desc:        'Relentless AI provides complete artist management services for emerging musicians. From the moment you sign with us, we build your presence, your portfolio, and your pipeline.',
-    icon:        '🎯',
-    accentColor: '#C9A84C',
-    packages: [
-      {
-        id:'portfolio',
-        name:'Portfolio Creation',
-        price:'₹25,000 one-time',
-        desc:'A professional artist portfolio that represents you at your best. Press kit, bio, high-res photography direction, and brand identity.',
-        items:['Artist biography (long and short form)','Professional press kit','Brand colour and typography guide','Social media profile optimisation'],
-      },
-      {
-        id:'website',
-        name:'Artist Website',
-        price:'From ₹60,000',
-        desc:'A custom-built website in the same class as Ron\'s — cinematic, mobile-first, and built to convert visitors into clients.',
-        items:['Custom design and development','Mobile-optimised','AI booking assistant','Analytics dashboard','CMS so you update your own content'],
-      },
-      {
-        id:'social',
-        name:'Social Media Management',
-        price:'₹15,000 / month',
-        desc:'Consistent, on-brand social media presence across Instagram, YouTube, and LinkedIn. Charged separately and based on a monthly retainer.',
-        items:['Content calendar','Post design and copywriting','Reel editing','Audience growth strategy','Monthly performance report'],
-      },
-      {
-        id:'gig-performance',
-        name:'Gig Curation — Performances',
-        price:'15% commission',
-        desc:'We actively source, pitch, and negotiate performance gigs on your behalf. Weddings, corporate events, festivals, and private bookings.',
-        items:['Active outreach to event planners','Contract negotiation','Logistics coordination','Post-event follow-up and review collection'],
-      },
-      {
-        id:'gig-teaching',
-        name:'Gig Curation — Teaching',
-        price:'10% commission',
-        desc:'We connect you with schools, institutions, and private clients looking for music educators.',
-        items:['School outreach','Curriculum proposal writing','Parent communication support','Rate negotiation'],
       },
     ],
   },
