@@ -74,17 +74,21 @@ export default function StatsBar() {
 
   return (
     <section
+      className="section-base"
       style={{
-        background: '#0A0A0C',
-        borderTop: '1px solid rgba(201,168,76,0.08)',
+        padding: 0,
         opacity: triggered ? 1 : 0,
         transform: triggered ? 'translateY(0)' : 'translateY(40px)',
         transition: `opacity 0.8s ${EASE}, transform 0.8s ${EASE}`,
       }}
     >
+      {/* Ambient glow — matches the pattern used in every other section */}
+      <div className="section-atmo" />
+
       <div
         ref={containerRef}
         className="
+          relative z-10
           max-w-7xl mx-auto px-16 max-md:px-6 max-sm:px-4
           py-[80px] max-md:py-[56px]
           grid grid-cols-4 max-sm:grid-cols-2
