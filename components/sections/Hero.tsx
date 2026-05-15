@@ -25,6 +25,17 @@ const HIDDEN: React.CSSProperties = {
   willChange: 'opacity, transform',
 }
 
+// Per-item hidden style for each stat number div.
+// iOS compositing layers can render children independently of a parent's
+// opacity when willChange is present — each item needs its own opacity:0
+// so it is invisible even if the compositor draws it before the parent
+// opacity cascades.
+const STAT_ITEM_HIDDEN: React.CSSProperties = {
+  opacity: 0,
+  transform: 'translateY(10px)',
+  willChange: 'opacity, transform',
+}
+
 export default function Hero() {
   // heroReady still drives the scroll hint (motion.div below)
   const [heroReady, setHeroReady] = useState(false)
@@ -36,20 +47,29 @@ export default function Hero() {
   const socialsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const els = [
-      eyebrowRef.current,
-      taglineRef.current,
-      statsRef.current,
-      socialsRef.current,
-    ]
-
     const handler = () => {
       // Drive scroll hint via React state (Framer Motion, unchanged)
       setHeroReady(true)
 
+      // Collect individual stat items at animation time so GSAP targets
+      // each one directly. Each item has its own opacity:0 (STAT_ITEM_HIDDEN),
+      // so the container's opacity alone is not sufficient on iOS compositing.
+      const statItems = statsRef.current
+        ? (Array.from(statsRef.current.children) as HTMLElement[])
+        : []
+
+      const els = [
+        eyebrowRef.current,
+        taglineRef.current,
+        ...statItems,
+        socialsRef.current,
+      ]
+
       // Drive content reveal via GSAP — same ticker as the curtain/fly
       // animation already running in Loader.tsx. Single RAF loop on iOS
       // eliminates the scheduling gap that caused the visible lag.
+      // clearProps:'opacity,transform' removes GSAP's inline styles after
+      // animation so no stale transform or opacity lingers in the DOM.
       gsap.fromTo(
         els,
         { opacity: 0, y: 10 },
@@ -59,7 +79,7 @@ export default function Hero() {
           duration: 0.5,
           ease: 'power2.out',
           stagger: 0.08,
-          clearProps: 'transform',
+          clearProps: 'opacity,transform',
         }
       )
     }
@@ -67,7 +87,9 @@ export default function Hero() {
     window.addEventListener('rp:loader-done', handler)
     return () => {
       window.removeEventListener('rp:loader-done', handler)
-      gsap.killTweensOf(els)
+      // Kill any in-flight tweens on cleanup (hot-reload / unmount safety)
+      if (statsRef.current) gsap.killTweensOf(Array.from(statsRef.current.children))
+      gsap.killTweensOf([eyebrowRef.current, taglineRef.current, socialsRef.current])
     }
   }, [])
 
@@ -126,14 +148,14 @@ export default function Hero() {
           Crafting musical experiences that transcend the ordinary
         </p>
 
-        {/* Stats */}
+        {/* Stats — container has no opacity so it does not interfere with
+            each item's own opacity:0. GSAP targets children individually. */}
         <div
           ref={statsRef}
           className="flex gap-14 mt-6 pt-5 border-t border-[var(--gold-border)] max-sm:grid max-sm:grid-cols-2 max-sm:gap-4 max-sm:gap-x-8"
-          style={HIDDEN}
         >
           {STATS.map(s => (
-            <div key={s.n}>
+            <div key={s.n} style={STAT_ITEM_HIDDEN}>
               <span className="font-[var(--font-cinzel)] font-black gold-shimmer block leading-none" style={{ fontSize:'2rem' }}>{s.n}</span>
               <span className="font-[var(--font-mono)] text-[0.46rem] tracking-[0.26em] text-[var(--cream-ghost)] mt-1 block uppercase" style={{ whiteSpace:'pre-line' }}>{s.l}</span>
             </div>
