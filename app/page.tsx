@@ -1,6 +1,7 @@
 import Nav          from '@/components/layout/Nav'
 import SmoothScroll from '@/components/layout/SmoothScroll'
 import Hero         from '@/components/sections/Hero'
+import StatsBar     from '@/components/sections/StatsBar'
 import About        from '@/components/sections/About'
 import Collabs      from '@/components/sections/Collabs'
 import ServicesGrid from '@/components/sections/ServicesGrid'
@@ -18,6 +19,7 @@ export default function HomePage() {
       <Nav />
       <main>
         <Hero />
+        <StatsBar />
         <About />
         <Collabs />      {/* Network BEFORE Repertoire */}
         <ServicesGrid />  {/* Repertoire */}
