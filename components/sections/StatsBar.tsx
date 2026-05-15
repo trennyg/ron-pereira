@@ -74,11 +74,9 @@ export default function StatsBar() {
 
   return (
     <section
-      className="relative"
+      className="section-base"
       style={{
-        zIndex: 10,
         padding: 0,
-        background: 'transparent',
         opacity: triggered ? 1 : 0,
         transform: triggered ? 'translateY(0)' : 'translateY(40px)',
         transition: `opacity 0.8s ${EASE}, transform 0.8s ${EASE}`,
