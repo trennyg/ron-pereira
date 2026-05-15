@@ -17,26 +17,20 @@ const STATS = [
   { n:'8+',  l:'Distinct\nActs'     },
 ]
 
-// Initial hidden style applied inline so iOS never paints content visible
-// before the rp:loader-done handler fires. GSAP reads and overrides these.
-const HIDDEN: React.CSSProperties = {
-  opacity: 0,
-  transform: 'translateY(10px)',
-  willChange: 'opacity, transform',
-}
+// Opacity-only hidden style — no transform so GSAP never needs to clear one.
+// (Previously had translateY(10px) which GSAP stopped animating, leaving a
+// permanent 10px offset on eyebrow / tagline / socials.)
+const HIDDEN: React.CSSProperties = { opacity: 0 }
 
-// Per-item hidden style for each stat number div.
-// iOS compositing layers can render children independently of a parent's
-// opacity when willChange is present — each item needs its own opacity:0
-// so it is invisible even if the compositor draws it before the parent
-// opacity cascades.
+// Per-item hidden style for each stat number div. Kept separate from HIDDEN
+// so stat items can be targeted individually by GSAP.
 const STAT_ITEM_HIDDEN: React.CSSProperties = { opacity: 0 }
 
 export default function Hero() {
-  // heroReady still drives the scroll hint (motion.div below)
+  // heroReady drives the scroll hint (motion.div below)
   const [heroReady, setHeroReady] = useState(false)
 
-  // Refs for the four content elements GSAP animates
+  // Refs for the content elements GSAP reveals
   const eyebrowRef = useRef<HTMLParagraphElement>(null)
   const taglineRef = useRef<HTMLParagraphElement>(null)
   const statsRef   = useRef<HTMLDivElement>(null)
@@ -47,15 +41,15 @@ export default function Hero() {
       // Drive scroll hint via React state (Framer Motion, unchanged)
       setHeroReady(true)
 
-      // Collect individual stat items at animation time so GSAP targets
-      // each one directly. Each item has its own opacity:0 (STAT_ITEM_HIDDEN),
-      // so the container's opacity alone is not sufficient on iOS compositing.
+      // Collect individual stat items so GSAP targets each one directly.
       const statItems = statsRef.current
         ? (Array.from(statsRef.current.children) as HTMLElement[])
         : []
 
-      // Parse each stat number before resetting to "0" so the count-up
-      // starts from zero the moment the item becomes visible.
+      // Parse stat numbers and prepare spans for count-up.
+      // gold-shimmer uses -webkit-background-clip:text — every textContent
+      // change forces a GPU paint. Swap to plain colour for the duration of
+      // the count, then restore shimmer in onComplete.
       type StatNum = { span: HTMLElement; target: number; suffix: string; original: string }
       const statNums: StatNum[] = statItems.flatMap(item => {
         const span = item.children[0] as HTMLElement
@@ -65,11 +59,6 @@ export default function Hero() {
         if (isNaN(target)) return []
         const suffix   = original.replace(/[0-9]/g, '')
         span.textContent = '0' + suffix
-        // Remove gold-shimmer before the count starts.
-        // gold-shimmer uses -webkit-background-clip:text which forces a full
-        // GPU paint on every textContent change. With 4 spans counting
-        // simultaneously on iOS this drops frames (~6+ stall).
-        // Plain colour has zero per-frame GPU cost. Shimmer is restored onComplete.
         span.classList.remove('gold-shimmer')
         span.style.color = '#C9A84C'
         return [{ span, target, suffix, original }]
@@ -82,7 +71,8 @@ export default function Hero() {
         socialsRef.current,
       ]
 
-      // Opacity + position reveal — same ticker as curtain/fly in Loader.tsx.
+      // Opacity reveal — chained directly to rp:loader-done (name landing
+      // onComplete). Same GSAP ticker as curtain/fly in Loader.tsx.
       gsap.fromTo(
         els,
         { opacity: 0 },
@@ -95,22 +85,34 @@ export default function Hero() {
         }
       )
 
-      // Count-up — each number rolls from 0 to its target value.
-      // Delay matches the stagger position of that item in els
-      // (eyebrow=0, tagline=1, then statItems start at index 2).
-      statNums.forEach(({ span, target, suffix, original }, idx) => {
-        const counter = { val: 0 }
-        gsap.to(counter, {
-          val: target,
-          duration: 0.7,
-          ease: 'power2.out',
-          delay: (idx + 2) * 0.05,
-          onUpdate() { span.textContent = Math.round(counter.val) + suffix },
-          onComplete() {
-            span.textContent = original
-            span.style.color = ''
-            span.classList.add('gold-shimmer')
-          },
+      // Count-up — wrapped in document.fonts.ready + rAF double-guard.
+      // document.fonts.ready ensures Cinzel is fully rendered before counting
+      // begins; the rAF gives iOS one settled compositor frame after the
+      // opacity reveal paints before the count-up's textContent writes start.
+      // Since rp:loader-done already gates behind fonts.ready in Loader.tsx,
+      // the Promise resolves as a microtask here (no real delay on desktop).
+      document.fonts.ready.then(() => {
+        requestAnimationFrame(() => {
+          statNums.forEach(({ span, target, suffix, original }, idx) => {
+            const counter = { val: 0 }
+            gsap.to(counter, {
+              val: target,
+              duration: 1.4,
+              ease: 'power2.out',
+              // Align count-up start with each item's stagger position in els.
+              // (eyebrow=0, tagline=1, statItems start at idx 2.)
+              delay: (idx + 2) * 0.05,
+              // snap ensures only integers are written — no decimal flicker
+              // mid-count regardless of frame timing on iOS.
+              snap: { val: 1 },
+              onUpdate() { span.textContent = counter.val + suffix },
+              onComplete() {
+                span.textContent = original
+                span.style.color = ''
+                span.classList.add('gold-shimmer')
+              },
+            })
+          })
         })
       })
     }
@@ -118,21 +120,20 @@ export default function Hero() {
     window.addEventListener('rp:loader-done', handler)
     return () => {
       window.removeEventListener('rp:loader-done', handler)
-      // Kill any in-flight tweens on cleanup (hot-reload / unmount safety)
       if (statsRef.current) gsap.killTweensOf(Array.from(statsRef.current.children))
       gsap.killTweensOf([eyebrowRef.current, taglineRef.current, socialsRef.current])
     }
   }, [])
 
   return (
-    // isolate: prevents stacking context ambiguity that causes iOS to
-    // re-composite the entire hero on any child repaint.
+    // isolate: explicit stacking context prevents iOS from re-compositing
+    // the entire hero on any child repaint during the reveal sequence.
     <section
       data-hero-section
       className="relative min-h-[100svh] flex flex-col justify-end overflow-hidden isolate"
     >
 
-      {/* Cover photo — Ken Burns (motion.div unchanged) */}
+      {/* Cover photo — Ken Burns (Framer Motion, unchanged) */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <motion.div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage:'url(/images/hero-cover.jpg)', backgroundColor:'#1A0800', mixBlendMode:'screen' as const, opacity:0.9 }}
@@ -143,10 +144,10 @@ export default function Hero() {
         <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 80% 60% at 65% 45%,rgba(160,80,10,0.22),transparent 70%)' }} />
       </div>
 
-      {/* Content — plain div, GSAP drives all children via refs */}
+      {/* Content — plain div, GSAP drives children via refs */}
       <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10">
 
-        {/* Eyebrow — initially hidden via inline style, revealed by GSAP */}
+        {/* Eyebrow */}
         <p
           ref={eyebrowRef}
           className="font-[var(--font-cinzel)] text-[0.55rem] tracking-[0.6em] text-[var(--gold)] mb-6 mt-2"
@@ -179,8 +180,8 @@ export default function Hero() {
           Crafting musical experiences that transcend the ordinary
         </p>
 
-        {/* Stats — container has no opacity so it does not interfere with
-            each item's own opacity:0. GSAP targets children individually. */}
+        {/* Stats — container has no opacity; each item controls its own
+            visibility so GSAP can target them individually. */}
         <div
           ref={statsRef}
           className="flex gap-14 mt-6 pt-5 border-t border-[var(--gold-border)] max-sm:grid max-sm:grid-cols-2 max-sm:gap-4 max-sm:gap-x-8"
@@ -209,7 +210,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Scroll hint — motion.div unchanged, still driven by heroReady state */}
+      {/* Scroll hint — Framer Motion, driven by heroReady state (unchanged) */}
       <motion.div
         className="absolute bottom-8 right-12 flex flex-col items-center gap-2 max-md:hidden"
         initial={{ opacity: 0 }}
