@@ -64,7 +64,14 @@ export default function Hero() {
         const target   = parseInt(original, 10)
         if (isNaN(target)) return []
         const suffix   = original.replace(/[0-9]/g, '')
-        span.textContent = '0' + suffix   // reset before reveal so first visible frame is "0+"
+        span.textContent = '0' + suffix
+        // Remove gold-shimmer before the count starts.
+        // gold-shimmer uses -webkit-background-clip:text which forces a full
+        // GPU paint on every textContent change. With 4 spans counting
+        // simultaneously on iOS this drops frames (~6+ stall).
+        // Plain colour has zero per-frame GPU cost. Shimmer is restored onComplete.
+        span.classList.remove('gold-shimmer')
+        span.style.color = '#C9A84C'
         return [{ span, target, suffix, original }]
       })
 
@@ -99,7 +106,11 @@ export default function Hero() {
           ease: 'power2.out',
           delay: (idx + 2) * 0.05,
           onUpdate() { span.textContent = Math.round(counter.val) + suffix },
-          onComplete() { span.textContent = original },
+          onComplete() {
+            span.textContent = original
+            span.style.color = ''
+            span.classList.add('gold-shimmer')
+          },
         })
       })
     }
