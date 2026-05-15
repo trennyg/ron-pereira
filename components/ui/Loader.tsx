@@ -174,6 +174,10 @@ export default function Loader({ onComplete }: LoaderProps) {
       })
 
       // ── Phase 1: PEREIRA drops below RON (RON stays put) ──
+      // Stop Lenis during the name travel + hero reveal so iOS doesn't juggle
+      // scroll compositing on top of the curtain settle and FLIP animation.
+      // Hero.tsx's heroTl.onComplete calls lenis.start() to resume.
+      ;(globalThis as any).__lenis?.stop()
       gsap.to(perFly, {
         x: ronFromCx - toPERCx,
         y: ronFrom.bottom - toPER.top,

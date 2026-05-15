@@ -1,7 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { useEffect, useRef } from 'react'
+import gsap from 'gsap'
+
+// Framer Motion removed from this file entirely.
+// All animations (Ken Burns + content reveal) run on the GSAP ticker so iOS
+// handles one RAF loop instead of competing Framer Motion + GSAP loops during
+// the loader → hero handoff.
 
 const SOCIALS = [
   { href:'https://instagram.com/placeholder', label:'Instagram', icon:<svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg> },
@@ -16,80 +21,127 @@ const STATS = [
   { n:'8+',  l:'Distinct\nActs'     },
 ]
 
-const SPRING = { type:'spring' as const, stiffness:95, damping:18 }
-
-// GPU-layer promotion hint applied as a static style prop so the browser
-// creates compositing layers BEFORE animation fires — critical on iOS where
-// lazy compositing makes the first animated frame expensive.
-const WILL_CHANGE = { willChange: 'opacity, transform' } as const
-
-// staggerChildren variants — timing is relative to the moment heroReady flips
-// (inside Loader's onComplete/rp:loader-done dispatch), not fixed timers.
-// Fixed timer offsets compound with iOS GPU compositing lag; stagger does not.
-const STAGGER_NORMAL  = { hidden: {}, show: { transition: { staggerChildren: 0.15, delayChildren: 0.05 } } }
-const STAGGER_REDUCED = { hidden: {}, show: { transition: { staggerChildren: 0 } } }
-
-// Per-element variants — transition lives in the 'show' state so each element
-// owns its spring while the parent stagger controls when it starts.
-const V_EYEBROW = { hidden: { opacity: 0, x: -60     }, show: { opacity: 0.85, x: 0, transition: SPRING } }
-const V_TAGLINE = { hidden: { opacity: 0, x: '60vw'  }, show: { opacity: 1,    x: 0, transition: SPRING } }
-const V_STATS   = { hidden: { opacity: 0, x: '-60vw' }, show: { opacity: 1,    x: 0, transition: SPRING } }
-const V_SOCIALS = { hidden: { opacity: 0, y: 20      }, show: { opacity: 1,    y: 0, transition: SPRING } }
-
 export default function Hero() {
-  const [heroReady, setHeroReady] = useState(false)
-  // Collapse stagger to zero when the user prefers reduced motion so content
-  // snaps in immediately. MotionConfig(reducedMotion="user") in ClientShell
-  // also disables transitions globally, but this eliminates the stagger delay.
-  const prefersReduced = useReducedMotion()
+  // Ken Burns ref — GSAP scale animation, same ticker as hero reveal
+  const kenBurnsRef   = useRef<HTMLDivElement>(null)
+  // Content refs — driven by paused heroTl, played on rp:loader-done
+  const eyebrowRef    = useRef<HTMLParagraphElement>(null)
+  const taglineRef    = useRef<HTMLParagraphElement>(null)
+  const statsRef      = useRef<HTMLDivElement>(null)
+  const socialsRef    = useRef<HTMLDivElement>(null)
+  const scrollHintRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handler = () => setHeroReady(true)
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // ── Ken Burns — starts immediately, runs for the page's lifetime ──────────
+    // yoyo:true + repeat:-1 replicates Framer Motion's repeatType:'reverse'
+    gsap.fromTo(kenBurnsRef.current,
+      { scale: 1.12 },
+      { scale: 1.04, duration: 18, ease: 'linear', yoyo: true, repeat: -1 }
+    )
+
+    // ── Hero content reveal — paused, played when rp:loader-done fires ────────
+    // Initial opacity:0 / translateY is set via inline styles on elements so iOS
+    // never paints them in their final state before this effect runs.
+    const heroTl = gsap.timeline({
+      paused: true,
+      onComplete() {
+        // Resume Lenis scroll once hero content is fully visible
+        ;(globalThis as any).__lenis?.start()
+        // Release compositing hint — no longer needed after first paint
+        ;[eyebrowRef, taglineRef, statsRef, socialsRef, scrollHintRef].forEach(r => {
+          if (r.current) r.current.style.willChange = 'auto'
+        })
+      },
+    })
+
+    if (reduced) {
+      // Respect prefers-reduced-motion: snap to final state, no animation
+      heroTl
+        .set(eyebrowRef.current,    { opacity: 0.85, y: 0 })
+        .set(taglineRef.current,    { opacity: 1,    y: 0 })
+        .set(statsRef.current,      { opacity: 1,    y: 0 })
+        .set(socialsRef.current,    { opacity: 1,    y: 0 })
+        .set(scrollHintRef.current, { opacity: 0.55       })
+    } else {
+      heroTl
+        // City / availability line — eyebrow
+        .fromTo(eyebrowRef.current,
+          { opacity: 0, y: 12 },
+          { opacity: 0.85, y: 0, duration: 0.5, ease: 'power2.out' }
+        )
+        // Tagline — overlaps eyebrow tail
+        .fromTo(taglineRef.current,
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
+          '-=0.3'
+        )
+        // Stats block — overlaps tagline tail
+        .fromTo(statsRef.current,
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' },
+          '-=0.25'
+        )
+        // Socials — overlaps stats tail
+        .fromTo(socialsRef.current,
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
+          '-=0.25'
+        )
+        // Scroll hint — fades in last
+        .fromTo(scrollHintRef.current,
+          { opacity: 0 },
+          { opacity: 0.55, duration: 0.5, ease: 'power2.out' },
+          '-=0.3'
+        )
+    }
+
+    const handler = () => heroTl.play()
     window.addEventListener('rp:loader-done', handler)
-    return () => window.removeEventListener('rp:loader-done', handler)
+
+    return () => {
+      window.removeEventListener('rp:loader-done', handler)
+      heroTl.kill()
+      gsap.killTweensOf(kenBurnsRef.current)
+    }
   }, [])
 
   return (
-    // isolate: prevents stacking context ambiguity that causes iOS to
-    // re-composite the entire hero on any child repaint.
+    // isolate: explicit stacking context — prevents iOS re-compositing the entire
+    // hero on any child repaint during the GSAP timeline.
     <section
       data-hero-section
       className="relative min-h-[100svh] flex flex-col justify-end overflow-hidden isolate"
     >
 
-      {/* Cover photo — Ken Burns */}
+      {/* Cover photo — Ken Burns via GSAP (same ticker as hero reveal) */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <motion.div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage:'url(/images/hero-cover.jpg)', backgroundColor:'#1A0800', mixBlendMode:'screen' as const, opacity:0.9 }}
-          initial={{ scale:1.12 }} animate={{ scale:1.04 }}
-          transition={{ duration:18, ease:'linear', repeat:Infinity, repeatType:'reverse' }} />
+        <div
+          ref={kenBurnsRef}
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(/images/hero-cover.jpg)',
+            backgroundColor: '#1A0800',
+            mixBlendMode: 'screen' as const,
+            opacity: 0.9,
+          }}
+        />
         <div className="absolute inset-0" style={{ background:'linear-gradient(180deg,rgba(8,5,2,0.08) 0%,rgba(8,5,2,0) 25%,rgba(8,5,2,0.6) 72%,rgba(8,5,2,0.98) 100%)' }} />
         <div className="absolute inset-0" style={{ background:'linear-gradient(90deg,rgba(8,5,2,0.65) 0%,transparent 55%)' }} />
         <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 80% 60% at 65% 45%,rgba(160,80,10,0.22),transparent 70%)' }} />
       </div>
 
-      {/* Stagger container — sequences all hero UI children relative to heroReady.
-          Non-motion children (data-hero-slot) are invisible to the stagger engine
-          and don't interrupt ordering. Stagger order:
-            0 eyebrow   → +0.05s
-            1 tagline   → +0.20s
-            2 stats     → +0.35s
-            3 socials   → +0.50s                                                */}
-      <motion.div
-        className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10"
-        variants={prefersReduced ? STAGGER_REDUCED : STAGGER_NORMAL}
-        initial="hidden"
-        animate={heroReady ? 'show' : 'hidden'}
-      >
+      <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10">
 
-        {/* Eyebrow */}
-        <motion.p
+        {/* Eyebrow — opacity:0 inline prevents flash before useEffect hydrates */}
+        <p
+          ref={eyebrowRef}
           className="font-[var(--font-cinzel)] text-[0.55rem] tracking-[0.6em] text-[var(--gold)] mb-6 mt-2"
-          variants={V_EYEBROW}
-          style={WILL_CHANGE}
+          style={{ opacity: 0, transform: 'translateY(12px)', willChange: 'opacity, transform' }}
         >
           Mumbai &nbsp;·&nbsp; Available Worldwide
-        </motion.p>
+        </p>
 
         {/* RON PEREIRA layout placeholder.
             opacity:0 inline — permanently invisible. The visible name is the
@@ -100,40 +152,40 @@ export default function Hero() {
           data-hero-slot
           aria-hidden="true"
           className="font-[var(--font-cinzel)] font-black leading-[0.9]"
-          style={{ fontSize:'clamp(2.6rem,12vw,15rem)', opacity: 0 }}
+          style={{ fontSize: 'clamp(2.6rem,12vw,15rem)', opacity: 0 }}
         >
           <span className="block text-[var(--cream)]">RON</span>
           <span className="block gold-shimmer">PEREIRA</span>
         </div>
 
         {/* Tagline */}
-        <motion.p
+        <p
+          ref={taglineRef}
           className="font-[var(--font-cormorant)] font-light italic text-[var(--cream-dim)] mt-5 tracking-[0.05em]"
-          style={{ ...WILL_CHANGE, fontSize:'clamp(0.9rem,1.3vw,1.2rem)' }}
-          variants={V_TAGLINE}
+          style={{ opacity: 0, transform: 'translateY(12px)', willChange: 'opacity, transform', fontSize: 'clamp(0.9rem,1.3vw,1.2rem)' }}
         >
           Crafting musical experiences that transcend the ordinary
-        </motion.p>
+        </p>
 
         {/* Stats */}
-        <motion.div
+        <div
+          ref={statsRef}
           className="flex gap-14 mt-6 pt-5 border-t border-[var(--gold-border)] max-sm:grid max-sm:grid-cols-2 max-sm:gap-4 max-sm:gap-x-8"
-          style={WILL_CHANGE}
-          variants={V_STATS}
+          style={{ opacity: 0, transform: 'translateY(16px)', willChange: 'opacity, transform' }}
         >
           {STATS.map(s => (
             <div key={s.n}>
-              <span className="font-[var(--font-cinzel)] font-black gold-shimmer block leading-none" style={{ fontSize:'2rem' }}>{s.n}</span>
-              <span className="font-[var(--font-mono)] text-[0.46rem] tracking-[0.26em] text-[var(--cream-ghost)] mt-1 block uppercase" style={{ whiteSpace:'pre-line' }}>{s.l}</span>
+              <span className="font-[var(--font-cinzel)] font-black gold-shimmer block leading-none" style={{ fontSize: '2rem' }}>{s.n}</span>
+              <span className="font-[var(--font-mono)] text-[0.46rem] tracking-[0.26em] text-[var(--cream-ghost)] mt-1 block uppercase" style={{ whiteSpace: 'pre-line' }}>{s.l}</span>
             </div>
           ))}
-        </motion.div>
+        </div>
 
         {/* Socials */}
-        <motion.div
+        <div
+          ref={socialsRef}
           className="flex gap-3 mt-5"
-          style={WILL_CHANGE}
-          variants={V_SOCIALS}
+          style={{ opacity: 0, transform: 'translateY(12px)', willChange: 'opacity, transform' }}
         >
           {SOCIALS.map(s => (
             <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
@@ -142,21 +194,18 @@ export default function Hero() {
               {s.icon}
             </a>
           ))}
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
-      {/* Scroll hint — absolutely positioned, not in the stagger flow.
-          Short delay so it trails just after the last staggered child (~0.50s). */}
-      <motion.div
+      {/* Scroll hint */}
+      <div
+        ref={scrollHintRef}
         className="absolute bottom-8 right-12 flex flex-col items-center gap-2 max-md:hidden"
-        style={WILL_CHANGE}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: heroReady ? 0.55 : 0 }}
-        transition={{ duration: 0.6, delay: heroReady ? 0.3 : 0 }}
+        style={{ opacity: 0, willChange: 'opacity' }}
       >
-        <span className="font-[var(--font-mono)] text-[0.4rem] tracking-[0.4em] text-[var(--gold)] mb-5" style={{ writingMode:'vertical-rl' }}>Scroll</span>
-        <div className="w-px h-12 bg-gradient-to-b from-[var(--gold)] to-transparent" style={{ animation:'scrollHint 2.2s ease-in-out infinite' }} />
-      </motion.div>
+        <span className="font-[var(--font-mono)] text-[0.4rem] tracking-[0.4em] text-[var(--gold)] mb-5" style={{ writingMode: 'vertical-rl' }}>Scroll</span>
+        <div className="w-px h-12 bg-gradient-to-b from-[var(--gold)] to-transparent" style={{ animation: 'scrollHint 2.2s ease-in-out infinite' }} />
+      </div>
     </section>
   )
 }
