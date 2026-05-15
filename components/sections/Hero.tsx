@@ -76,9 +76,9 @@ export default function Hero() {
         {
           opacity: 1,
           y: 0,
-          duration: 0.5,
+          duration: 0.3,
           ease: 'power2.out',
-          stagger: 0.08,
+          stagger: 0.05,
           clearProps: 'opacity,transform',
         }
       )
