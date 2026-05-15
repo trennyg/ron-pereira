@@ -54,6 +54,20 @@ export default function Hero() {
         ? (Array.from(statsRef.current.children) as HTMLElement[])
         : []
 
+      // Parse each stat number before resetting to "0" so the count-up
+      // starts from zero the moment the item becomes visible.
+      type StatNum = { span: HTMLElement; target: number; suffix: string; original: string }
+      const statNums: StatNum[] = statItems.flatMap(item => {
+        const span = item.children[0] as HTMLElement
+        if (!span) return []
+        const original = span.textContent ?? ''
+        const target   = parseInt(original, 10)
+        if (isNaN(target)) return []
+        const suffix   = original.replace(/[0-9]/g, '')
+        span.textContent = '0' + suffix   // reset before reveal so first visible frame is "0+"
+        return [{ span, target, suffix, original }]
+      })
+
       const els = [
         eyebrowRef.current,
         taglineRef.current,
@@ -61,11 +75,7 @@ export default function Hero() {
         socialsRef.current,
       ]
 
-      // Drive content reveal via GSAP — same ticker as the curtain/fly
-      // animation already running in Loader.tsx. Single RAF loop on iOS
-      // eliminates the scheduling gap that caused the visible lag.
-      // clearProps:'opacity,transform' removes GSAP's inline styles after
-      // animation so no stale transform or opacity lingers in the DOM.
+      // Opacity + position reveal — same ticker as curtain/fly in Loader.tsx.
       gsap.fromTo(
         els,
         { opacity: 0, y: 10 },
@@ -78,6 +88,21 @@ export default function Hero() {
           clearProps: 'opacity,transform',
         }
       )
+
+      // Count-up — each number rolls from 0 to its target value.
+      // Delay matches the stagger position of that item in els
+      // (eyebrow=0, tagline=1, then statItems start at index 2).
+      statNums.forEach(({ span, target, suffix, original }, idx) => {
+        const counter = { val: 0 }
+        gsap.to(counter, {
+          val: target,
+          duration: 0.7,
+          ease: 'power2.out',
+          delay: (idx + 2) * 0.05,
+          onUpdate() { span.textContent = Math.round(counter.val) + suffix },
+          onComplete() { span.textContent = original },
+        })
+      })
     }
 
     window.addEventListener('rp:loader-done', handler)
