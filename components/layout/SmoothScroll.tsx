@@ -32,14 +32,16 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     ;(globalThis as any).__lenis = lenis
 
+    let loopId: number
     function raf(time: number) {
       lenis.raf(time)
-      requestAnimationFrame(raf)
+      loopId = requestAnimationFrame(raf)
     }
-    requestAnimationFrame(raf)
+    loopId = requestAnimationFrame(raf)
 
     return () => {
       cancelAnimationFrame(rafId)
+      cancelAnimationFrame(loopId)
       lenis.destroy()
       ;(globalThis as any).__lenis = null
     }

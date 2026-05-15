@@ -22,19 +22,6 @@ function BookingWrapper({ svcId }: { svcId: string }) {
 export default function ServicePageClient({ service: svc }: { service: Service }) {
   const router = useRouter()
 
-  // Scroll to top — multiple approaches for reliability
-  useEffect(() => {
-    // Immediate
-    window.scrollTo(0, 0)
-    document.documentElement.scrollTop = 0
-    document.body.scrollTop = 0
-    // After React paint
-    requestAnimationFrame(() => {
-      window.scrollTo(0, 0)
-      document.documentElement.scrollTop = 0
-    })
-  }, [svc.slug])
-
   // Turn horizontal trackpad swipe into service navigation
   // preventDefault() stops browser back gesture, then we handle it ourselves
   useEffect(() => {
