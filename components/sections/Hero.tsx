@@ -26,8 +26,9 @@ const STAT_ITEM_HIDDEN: React.CSSProperties = { opacity: 0 }
 // running on the same thread budget, causing mid-count freezes. A direct
 // requestAnimationFrame call cannot be stalled by other GSAP work.
 //
-// Uses performance.now() delta timing so frame-rate variation (60/120 Hz,
-// low-power mode) never causes the count to overshoot or undershoot.
+// Delta-clamped: each frame can advance elapsed by at most 16ms regardless
+// of how long iOS suspended rAF. Without clamping, a 1000ms suspension
+// causes progress ≈ 1 on resumption and the entire count is skipped.
 // Ease-out exponential: 1 - 2^(-10t) — fast start, decelerates to a stop.
 function animateCounter(
   span: HTMLElement,
@@ -37,25 +38,40 @@ function animateCounter(
   durationMs: number,
   delayMs: number,
 ): void {
-  // startAt is a wall-clock timestamp; the rAF loop spins harmlessly until
-  // it is reached, then begins the actual count. No setTimeout needed.
   const startAt = performance.now() + delayMs
+  let lastTime: number | null = null
+  let elapsed = 0
 
   function tick(now: number): void {
+    // Spin until delay elapses — no setTimeout needed.
     if (now < startAt) {
       requestAnimationFrame(tick)
       return
     }
-    const elapsed  = now - startAt
+
+    if (lastTime === null) {
+      // First real tick after delay — initialise clock, don't advance yet.
+      lastTime = now
+      requestAnimationFrame(tick)
+      return
+    }
+
+    // Clamp frame delta to 16ms max.
+    // If iOS suspended rAF for 800ms, this tick advances elapsed by only
+    // 16ms instead of 800ms — animation continues from exactly where it
+    // left off rather than jumping to the final value.
+    const delta = Math.min(now - lastTime, 16)
+    lastTime = now
+    elapsed += delta
+
     const progress = Math.min(elapsed / durationMs, 1)
-    const eased    = progress >= 1 ? 1 : 1 - Math.pow(2, -10 * progress)
+    const eased    = 1 - Math.pow(2, -10 * progress)
     span.textContent = Math.round(eased * target) + suffix
 
     if (progress < 1) {
       requestAnimationFrame(tick)
     } else {
-      // Count is complete — restore the exact original string ("18+" etc.)
-      // and re-apply the gold-shimmer gradient animation.
+      // Guarantee exact final string — no rounding edge cases.
       span.textContent = original
       span.style.color = ''
       span.classList.add('gold-shimmer')
