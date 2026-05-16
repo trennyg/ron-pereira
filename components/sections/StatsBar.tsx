@@ -136,8 +136,8 @@ export default function StatsBar() {
 
             {/* Label */}
             <p
-              className="font-[var(--font-cormorant)] uppercase"
-              style={{ fontSize: '16px', color: '#F5F0E8', letterSpacing: '0.2em' }}
+              className="font-[var(--font-cormorant)] uppercase text-[16px] max-sm:text-[13px] tracking-[0.2em] max-sm:tracking-[0.15em]"
+              style={{ color: '#F5F0E8' }}
             >
               {stat.label}
             </p>
