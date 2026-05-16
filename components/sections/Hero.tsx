@@ -80,14 +80,6 @@ export default function Hero() {
 
       <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pt-24 max-sm:pb-10">
 
-        <p
-          ref={eyebrowRef}
-          className="font-[var(--font-cinzel)] text-[0.55rem] tracking-[0.6em] text-[var(--gold)] mb-6 mt-2"
-          style={HIDDEN}
-        >
-          Mumbai &nbsp;·&nbsp; Available Worldwide
-        </p>
-
         {/* RON PEREIRA layout placeholder — permanently invisible.
             Provides font-metric height so tagline/socials are positioned
             correctly while the travelling fly elements are the visible name. */}
@@ -95,11 +87,19 @@ export default function Hero() {
           data-hero-slot
           aria-hidden="true"
           className="font-[var(--font-cinzel)] font-black leading-[0.9]"
-          style={{ fontSize:'clamp(2.6rem,12vw,15rem)', opacity: 0 }}
+          style={{ fontSize:'clamp(3rem,13.5vw,17rem)', opacity: 0 }}
         >
           <span className="block text-[var(--cream)]">RON</span>
           <span className="block gold-shimmer">PEREIRA</span>
         </div>
+
+        <p
+          ref={eyebrowRef}
+          className="font-[var(--font-cinzel)] text-[0.55rem] tracking-[0.6em] text-[var(--gold)] mb-6 mt-2"
+          style={HIDDEN}
+        >
+          Mumbai &nbsp;·&nbsp; Available Worldwide
+        </p>
 
         <p
           ref={taglineRef}
