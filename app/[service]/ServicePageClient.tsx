@@ -197,14 +197,16 @@ function ActsSection({ svc }: { svc: Service }) {
               </p>
 
               {/* Book this format */}
-              <Link
-                href={`/#booking?service=${svc.id}&act=${act.name}`}
+              <a
+                href={`https://wa.me/919870482225?text=${encodeURIComponent(`Hi Ron, I'd like to book: ${svc.name} — ${act.name}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
                 className="inline-flex items-center gap-2 font-[var(--font-mono)] text-[0.44rem] tracking-[0.25em] text-[var(--gold)] uppercase border border-[var(--gold-border)] px-4 py-2 hover:bg-[var(--gold)] hover:text-black transition-all duration-300"
                 data-cursor-hover
               >
                 Book {act.name} →
-              </Link>
+              </a>
 
               {/* Bottom reveal line */}
               <motion.div
@@ -273,13 +275,15 @@ function SubServicesSection({ svc }: { svc: Service }) {
                   {sub.desc}
                 </p>
 
-                <Link
-                  href={`/#booking?service=${svc.id}&act=${encodeURIComponent(sub.name)}`}
+                <a
+                  href={`https://wa.me/919870482225?text=${encodeURIComponent(`Hi Ron, I'd like to enquire about: ${svc.name} — ${sub.name}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 font-[var(--font-mono)] text-[0.44rem] tracking-[0.25em] text-[var(--gold)] uppercase border border-[var(--gold-border)] px-4 py-2 hover:bg-[var(--gold)] hover:text-black transition-all duration-300"
                   data-cursor-hover
                 >
                   Book {sub.name} →
-                </Link>
+                </a>
 
                 <motion.div
                   className="absolute bottom-0 left-0 h-[1.5px] bg-gradient-to-r from-[var(--gold)] to-[var(--gold-l)]"
@@ -352,13 +356,15 @@ function PackagesSection({ svc }: { svc: Service }) {
                 </li>
               ))}
             </ul>
-            <Link
-              href={`/#booking?service=${svc.id}&act=${pkg.name}`}
+            <a
+              href={`https://wa.me/919870482225?text=${encodeURIComponent(`Hi Ron, I'd like to enquire about: ${pkg.name} — ${pkg.price}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 font-[var(--font-mono)] text-[0.44rem] tracking-[0.25em] text-[var(--gold)] uppercase border border-[var(--gold-border)] px-4 py-2 hover:bg-[var(--gold)] hover:text-black transition-all duration-300"
               data-cursor-hover
             >
               Enquire about this →
-            </Link>
+            </a>
 
             {/* Hover line */}
             <motion.div
