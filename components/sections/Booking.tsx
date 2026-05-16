@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion'
 import { ScrollReveal } from '@/components/ui/Reveal'
 import { SERVICES } from '@/lib/services'
@@ -16,8 +16,21 @@ export default function Booking({ preSelected, preAct }: { preSelected?: string;
   const [name,    setName]    = useState('')
   const [email,   setEmail]   = useState('')
   const [service, setService] = useState(preSelected ?? '')
+  const [act,     setAct]     = useState(preAct ?? '')
   const [date,    setDate]    = useState('')
   const [message, setMessage] = useState('')
+
+  // Build act/package options from selected service
+  const selectedSvc = SERVICES.find(s => s.id === service)
+  const actOptions: { value: string; label: string; disabled?: boolean }[] = selectedSvc
+    ? [
+        ...(selectedSvc.acts        ?? []).map(a => ({ value: a.name,    label: a.name })),
+        ...(selectedSvc.subServices ?? []).map(s => ({ value: s.name,    label: s.name })),
+        ...(selectedSvc.packages    ?? []).map(p => ({ value: p.name,    label: p.name })),
+      ]
+    : [{ value: '', label: 'Select a service first', disabled: true }]
+
+  const serviceOptions = SERVICES.map(s => ({ value: s.id, label: s.name }))
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,7 +41,7 @@ export default function Booking({ preSelected, preAct }: { preSelected?: string;
       `Name: ${name}`,
       `Email: ${email}`,
       `Service: ${svcName || 'Not specified'}`,
-      `Act / Package: ${preAct || 'Not specified'}`,
+      `Act / Package: ${act || 'Not specified'}`,
       `Event Date: ${date || 'Not specified'}`,
       '',
       `Message: ${message}`,
@@ -91,21 +104,22 @@ export default function Booking({ preSelected, preAct }: { preSelected?: string;
                 <Field label="Email"      type="email" placeholder="you@example.com"    value={email} onChange={setEmail} />
               </div>
               <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-                <div className="flex flex-col gap-[0.4rem]">
-                  <label className="font-[var(--font-mono)] text-[0.44rem] tracking-[0.32em] text-[var(--gold)] uppercase">Service</label>
-                  <select value={service} onChange={e => setService(e.target.value)} className="bg-[rgba(201,168,76,0.03)] border border-[var(--gold-border)] text-[var(--cream)] px-4 py-[0.9rem] font-[var(--font-cormorant)] text-[1rem] outline-none focus:border-[var(--gold)] transition-colors">
-                    <option value="">Select Service</option>
-                    {SERVICES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
+                <GoldSelect
+                  label="Service"
+                  value={service}
+                  onChange={v => { setService(v); setAct('') }}
+                  options={serviceOptions}
+                  placeholder="Select Service"
+                />
                 <Field label="Event Date" type="date" placeholder="" value={date} onChange={setDate} />
               </div>
-              {preAct && (
-                <div className="flex flex-col gap-[0.4rem]">
-                  <label className="font-[var(--font-mono)] text-[0.44rem] tracking-[0.32em] text-[var(--gold)] uppercase">Selected Act</label>
-                  <div className="border border-[var(--gold-border)] px-4 py-[0.9rem] text-[var(--cream-dim)] font-[var(--font-cormorant)]">{preAct}</div>
-                </div>
-              )}
+              <GoldSelect
+                label="Act / Package"
+                value={act}
+                onChange={setAct}
+                options={actOptions}
+                placeholder="Select Act or Package"
+              />
               <div className="flex flex-col gap-[0.4rem]">
                 <label className="font-[var(--font-mono)] text-[0.44rem] tracking-[0.32em] text-[var(--gold)] uppercase">Message</label>
                 <textarea rows={4} placeholder="Tell Ron about your event, guest count, venue, and vision..."
@@ -120,6 +134,72 @@ export default function Booking({ preSelected, preAct }: { preSelected?: string;
         </ScrollReveal>
       </div>
     </section>
+  )
+}
+
+/* ── GoldSelect — custom styled dropdown ── */
+function GoldSelect({ label, value, onChange, options, placeholder }: {
+  label:       string
+  value:       string
+  onChange:    (v: string) => void
+  options:     { value: string; label: string; disabled?: boolean }[]
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const selected = options.find(o => o.value === value && !o.disabled)
+
+  return (
+    <div ref={wrapRef} className="flex flex-col gap-[0.4rem]" style={{ position: 'relative' }}>
+      <label className="font-[var(--font-mono)] text-[0.44rem] tracking-[0.32em] text-[var(--gold)] uppercase">{label}</label>
+      <div
+        className="bg-[rgba(201,168,76,0.03)] border border-[var(--gold-border)] px-4 py-[0.9rem] font-[var(--font-cormorant)] text-[1rem] transition-colors cursor-pointer flex justify-between items-center"
+        onClick={() => setOpen(v => !v)}
+      >
+        <span style={{ color: selected ? 'var(--cream)' : 'var(--cream-ghost)' }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <span style={{ color: 'var(--gold)', fontSize: '0.75rem', lineHeight: 1 }}>▾</span>
+      </div>
+      {open && (
+        <div
+          className="absolute left-0 right-0 border border-[var(--gold-border)] overflow-y-auto"
+          style={{ top: '100%', background: '#0A0A0C', zIndex: 50, maxHeight: '14rem' }}
+        >
+          {options.map(opt => (
+            <div
+              key={opt.value + opt.label}
+              className="px-4 py-3 font-[var(--font-cormorant)] text-[1rem]"
+              style={{
+                color:      opt.disabled ? 'var(--cream-ghost)' : opt.value === value ? 'var(--gold)' : 'var(--cream)',
+                background: opt.value === value && !opt.disabled ? 'rgba(201,168,76,0.05)' : 'transparent',
+                cursor:     opt.disabled ? 'default' : 'pointer',
+              }}
+              onMouseEnter={e => { if (!opt.disabled) (e.currentTarget as HTMLDivElement).style.background = 'rgba(201,168,76,0.08)' }}
+              onMouseLeave={e => { if (!opt.disabled) (e.currentTarget as HTMLDivElement).style.background = opt.value === value ? 'rgba(201,168,76,0.05)' : 'transparent' }}
+              onMouseDown={() => {
+                if (opt.disabled) return
+                onChange(opt.value)
+                setOpen(false)
+              }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
