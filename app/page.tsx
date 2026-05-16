@@ -9,8 +9,8 @@ import Booking      from '@/components/sections/Booking'
 import Footer       from '@/components/layout/Footer'
 
 export const metadata = {
-  title:       'Ron Pereira — Musician · Performer · Educator',
-  description: 'Mumbai-based musician Ron Pereira. 18+ years of mastery. Available worldwide.',
+  title:       'Ron Ashton — Musician · Performer · Educator',
+  description: 'Mumbai-based musician Ron Ashton. 18+ years of mastery. Available worldwide.',
 }
 
 export default function HomePage() {

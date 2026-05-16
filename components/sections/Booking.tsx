@@ -42,7 +42,7 @@ export default function Booking({ preSelected, preAct }: { preSelected?: string;
           </ScrollReveal>
           <ScrollReveal direction="left" enterOnly>
             <ul className="flex flex-col gap-3">
-              {[{ icon:'✉', text:'ron@ronpereira.com' },{ icon:'☎', text:'+91 98XXX XXXXX' },{ icon:'◎', text:'Mumbai · Available Worldwide' }].map(item => (
+              {[{ icon:'✉', text:'ron@ronashton.com' },{ icon:'☎', text:'+91 98XXX XXXXX' },{ icon:'◎', text:'Mumbai · Available Worldwide' }].map(item => (
                 <li key={item.icon} className="flex items-center gap-3 font-[var(--font-cormorant)] text-[0.95rem] text-[var(--cream-dim)]">
                   <span className="text-[var(--gold)] w-5">{item.icon}</span>{item.text}
                 </li>

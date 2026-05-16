@@ -80,7 +80,7 @@ export default function Hero() {
 
       <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pt-24 max-sm:pb-10">
 
-        {/* RON PEREIRA layout placeholder — permanently invisible.
+        {/* RON ASHTON layout placeholder — permanently invisible.
             Provides font-metric height so tagline/socials are positioned
             correctly while the travelling fly elements are the visible name. */}
         <div
@@ -90,7 +90,7 @@ export default function Hero() {
           style={{ fontSize:'clamp(3rem,13.5vw,17rem)', opacity: 0 }}
         >
           <span className="block text-[var(--cream)]">RON</span>
-          <span className="block gold-shimmer">PEREIRA</span>
+          <span className="block gold-shimmer">ASHTON</span>
         </div>
 
         <p

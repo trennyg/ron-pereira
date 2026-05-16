@@ -163,7 +163,7 @@ export default function Loader({ onComplete }: LoaderProps) {
       }
 
       const ronFly = makeFly('RON',     toRON, false)
-      const perFly = makeFly('PEREIRA', toPER, true)
+      const perFly = makeFly('ASHTON', toPER, true)
 
       const ronFromCx = ronFrom.left + ronFrom.width  / 2
       const perFromCx = perFrom.left + perFrom.width  / 2
@@ -179,7 +179,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         scale: loaderScale, transformOrigin: 'top center',
       })
 
-      // ── Phase 1: PEREIRA drops below RON ──
+      // ── Phase 1: ASHTON drops below RON ──
       gsap.to(perFly, {
         x: ronFromCx - toPERCx,
         y: ronFrom.bottom - toPER.top,
@@ -333,7 +333,7 @@ export default function Loader({ onComplete }: LoaderProps) {
             background:'radial-gradient(ellipse,rgba(255,248,230,0.07) 0%,transparent 65%)' }} />
       </div>
 
-      {/* RON PEREIRA */}
+      {/* RON ASHTON */}
       <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none px-6">
         <div ref={nameRef}
           className="font-[var(--font-cinzel)] font-black text-center"
@@ -346,7 +346,7 @@ export default function Loader({ onComplete }: LoaderProps) {
             opacity: 0,
           }}>
           <span style={{ color:'var(--cream)' }}>RON </span>
-          <span className="gold-shimmer">PEREIRA</span>
+          <span className="gold-shimmer">ASHTON</span>
         </div>
       </div>
 

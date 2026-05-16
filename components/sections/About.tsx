@@ -56,7 +56,7 @@ export default function About() {
         <div className="flex flex-col gap-5">
           <ScrollReveal direction="right">
             <h3 className="font-[var(--font-cinzel)] font-bold text-[clamp(1.3rem,2.2vw,2.1rem)] leading-[1.25]">
-              Ron Pereira is not just a musician —{' '}
+              Ron Ashton is not just a musician —{' '}
               <em className="font-[var(--font-cormorant)] font-light italic">he is an experience.</em>
             </h3>
           </ScrollReveal>

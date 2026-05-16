@@ -3,7 +3,7 @@ import '../styles/globals.css'
 import ClientShell from '@/components/layout/ClientShell'
 
 export const metadata: Metadata = {
-  title:       'Ron Pereira — Musician · Performer · Educator',
+  title:       'Ron Ashton — Musician · Performer · Educator',
   description: 'Mumbai-based musician. 18+ years of mastery. Available worldwide.',
 }
 

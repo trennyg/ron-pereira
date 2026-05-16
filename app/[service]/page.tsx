@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ service: 
   const svc = getService(service)
   if (!svc) return {}
   return {
-    title:       `${svc.name} — Ron Pereira`,
+    title:       `${svc.name} — Ron Ashton`,
     description: svc.desc,
   }
 }
