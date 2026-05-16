@@ -1,23 +1,22 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import { motion, useScroll, useSpring } from 'framer-motion'
 import { ScrollReveal, AnimHeadingLine } from '@/components/ui/Reveal'
-import PhotoLightbox from '@/components/ui/PhotoLightbox'
 
 const COLLABS = [
-  { id:'a', name:'Artist Name A', role:'Vocalist · Collaborator',    event:'Event Name · 2024', icon:'🎵' },
-  { id:'b', name:'Artist Name B', role:'Composer · Producer',        event:'Event Name · 2023', icon:'🎶' },
-  { id:'c', name:'Artist Name C', role:'Guitarist · Session Artist', event:'Event Name · 2024', icon:'🎸' },
-  { id:'d', name:'Artist Name D', role:'Saxophonist · Jazz Artist',  event:'Event Name · 2023', icon:'🎷' },
-  { id:'e', name:'Artist Name E', role:'Vocalist · Film Artist',     event:'Event Name · 2024', icon:'🎤' },
-  { id:'f', name:'Artist Name F', role:'Keys · Arranger',            event:'Event Name · 2024', icon:'🎹' },
-  { id:'g', name:'Artist Name G', role:'Drummer · Percussionist',    event:'Event Name · 2023', icon:'🥁' },
-  { id:'h', name:'Artist Name H', role:'Bassist · Producer',         event:'Event Name · 2024', icon:'🎼' },
+  { id:'a', name:'Artist Name A', role:'Vocalist · Collaborator',    event:'Event Name · 2024' },
+  { id:'b', name:'Artist Name B', role:'Composer · Producer',        event:'Event Name · 2023' },
+  { id:'c', name:'Artist Name C', role:'Guitarist · Session Artist', event:'Event Name · 2024' },
+  { id:'d', name:'Artist Name D', role:'Saxophonist · Jazz Artist',  event:'Event Name · 2023' },
+  { id:'e', name:'Artist Name E', role:'Vocalist · Film Artist',     event:'Event Name · 2024' },
+  { id:'f', name:'Artist Name F', role:'Keys · Arranger',            event:'Event Name · 2024' },
+  { id:'g', name:'Artist Name G', role:'Drummer · Percussionist',    event:'Event Name · 2023' },
+  { id:'h', name:'Artist Name H', role:'Bassist · Producer',         event:'Event Name · 2024' },
 ]
 
 export default function Collabs() {
-  const ref     = useRef(null)
+  const ref      = useRef(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target:ref, offset:['start end','end start'] })
   const smooth = useSpring(scrollYProgress, { stiffness:100, damping:25 })
@@ -33,9 +32,6 @@ export default function Collabs() {
     const SPEED = 0.6 // px per frame
 
     // Duplicate cards for seamless loop
-    const cards = track.querySelectorAll('.collab-card-item')
-    const clone  = track.cloneNode(true) as HTMLDivElement
-    // We'll just use scrollLeft wrap-around approach
     const totalW = () => track.scrollWidth / 2
 
     // Pause on any interaction
@@ -96,21 +92,55 @@ export default function Collabs() {
       {/* Auto-scrolling horizontal track */}
       <div ref={trackRef} className="flex gap-4 overflow-x-auto pb-2 select-none" style={{ scrollbarWidth:'none', WebkitOverflowScrolling:'touch', cursor:'grab', touchAction:'pan-x', overscrollBehaviorX:'contain' }}>
         {doubled.map((c, i) => (
-          <div key={`${c.id}-${i}`} className="collab-card-item flex-shrink-0 w-[220px] border border-[var(--gold-border)] bg-[rgba(15,10,6,0.7)] backdrop-blur-sm relative overflow-hidden group hover:border-[var(--gold-border-h)] transition-colors duration-300 cursor-pointer"
-            style={{ aspectRatio:'1' }}
->
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 group-hover:opacity-0">
-              <div className="w-14 h-14 border border-[var(--gold-border)] rounded-full flex items-center justify-center text-2xl">{c.icon}</div>
-              <span className="font-[var(--font-cinzel)] text-[0.85rem] font-bold text-center">{c.name}</span>
-              <span className="font-[var(--font-mono)] text-[0.4rem] tracking-[0.22em] text-[var(--cream-dim)] text-center">{c.role.split(' · ')[0]}</span>
+          <div
+            key={`${c.id}-${i}`}
+            className="collab-card-item flex-shrink-0 w-[280px] relative group cursor-pointer flex flex-col bg-[rgba(10,7,4,0.9)]"
+            style={{ aspectRatio: '1' }}
+          >
+            {/* Image zone — top 65% */}
+            <div
+              className="relative flex-none overflow-hidden border border-[rgba(201,168,76,0.12)]"
+              style={{ height: '65%' }}
+            >
+              {/* Placeholder background + glyph — swap this div for <Image fill object-cover> when ready */}
+              <div className="absolute inset-0 bg-[rgba(201,168,76,0.04)] flex items-center justify-center">
+                <span style={{ color: 'var(--gold)', opacity: 0.18, fontSize: '2rem' }}>✦</span>
+              </div>
+
+              {/* Corner bracket — top-left */}
+              <div className="absolute top-0 left-0 pointer-events-none">
+                <div className="absolute top-0 left-0 w-5 h-px bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:w-7 transition-all duration-300" />
+                <div className="absolute top-0 left-0 w-px h-5 bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:h-7 transition-all duration-300" />
+              </div>
+              {/* Corner bracket — top-right */}
+              <div className="absolute top-0 right-0 pointer-events-none">
+                <div className="absolute top-0 right-0 w-5 h-px bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:w-7 transition-all duration-300" />
+                <div className="absolute top-0 right-0 w-px h-5 bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:h-7 transition-all duration-300" />
+              </div>
+              {/* Corner bracket — bottom-left */}
+              <div className="absolute bottom-0 left-0 pointer-events-none">
+                <div className="absolute bottom-0 left-0 w-5 h-px bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:w-7 transition-all duration-300" />
+                <div className="absolute bottom-0 left-0 w-px h-5 bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:h-7 transition-all duration-300" />
+              </div>
+              {/* Corner bracket — bottom-right */}
+              <div className="absolute bottom-0 right-0 pointer-events-none">
+                <div className="absolute bottom-0 right-0 w-5 h-px bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:w-7 transition-all duration-300" />
+                <div className="absolute bottom-0 right-0 w-px h-5 bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:h-7 transition-all duration-300" />
+              </div>
+
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-[rgba(8,5,2,0.72)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 p-4 text-center">
+                <span className="font-[var(--font-cinzel)] font-bold text-[0.95rem] gold-shimmer">{c.name}</span>
+                <span className="font-[var(--font-mono)] text-[0.38rem] tracking-widest text-[var(--cream-dim)]">{c.role}</span>
+                <span className="font-[var(--font-cormorant)] text-[0.82rem] italic text-[var(--cream-ghost)] mt-1">{c.event}</span>
+              </div>
             </div>
-            <div className="absolute inset-0 bg-[rgba(8,5,2,0.95)] flex flex-col items-center justify-center gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100 p-5 text-center">
-              <span className="font-[var(--font-cinzel)] font-bold text-[1rem] gold-shimmer">{c.name}</span>
-              <span className="font-[var(--font-mono)] text-[0.42rem] tracking-[0.28em] text-[var(--cream-dim)]">{c.role}</span>
-              <span className="font-[var(--font-cormorant)] text-[0.82rem] italic text-[var(--cream-ghost)] mt-1">{c.event}</span>
+
+            {/* Name + role strip — bottom 35% */}
+            <div className="flex-1 flex flex-col items-center justify-center px-3 gap-1">
+              <span className="font-[var(--font-cinzel)] text-[0.82rem] font-bold text-center leading-tight">{c.name}</span>
+              <span className="font-[var(--font-mono)] text-[0.38rem] tracking-widest text-[var(--cream-dim)] text-center">{c.role}</span>
             </div>
-            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[var(--gold)] opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[var(--gold)] opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         ))}
       </div>
