@@ -87,7 +87,7 @@ export default function Hero() {
           data-hero-slot
           aria-hidden="true"
           className="font-[var(--font-cinzel)] font-black leading-[0.9]"
-          style={{ fontSize:'clamp(3rem,13.5vw,17rem)', opacity: 0 }}
+          style={{ fontSize:'clamp(3.4rem,15vw,19rem)', opacity: 0 }}
         >
           <span className="block text-[var(--cream)]">RON</span>
           <span className="block gold-shimmer">PEREIRA</span>
