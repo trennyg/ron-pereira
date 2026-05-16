@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 
+declare global { interface Window { __rpLoaderDone?: boolean } }
+
 interface LoaderProps { onComplete: () => void }
 
 export default function Loader({ onComplete }: LoaderProps) {
@@ -98,6 +100,7 @@ export default function Loader({ onComplete }: LoaderProps) {
           setTimeout(() => {
             if (aborted) return
             window.dispatchEvent(new CustomEvent('hero:ready'))
+            window.__rpLoaderDone = true
             onComplete()
           }, 700)
         }, 900)
@@ -244,6 +247,7 @@ export default function Loader({ onComplete }: LoaderProps) {
               setTimeout(() => {
                 if (aborted) return
                 window.dispatchEvent(new CustomEvent('hero:ready'))
+                window.__rpLoaderDone = true
                 onComplete()
               }, 1100)
             },

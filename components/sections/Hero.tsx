@@ -16,24 +16,41 @@ const HIDDEN: React.CSSProperties = { opacity: 0 }
 export default function Hero() {
   const [heroReady, setHeroReady] = useState(false)
 
-  const eyebrowRef = useRef<HTMLParagraphElement>(null)
-  const taglineRef = useRef<HTMLParagraphElement>(null)
-  const socialsRef = useRef<HTMLDivElement>(null)
+  const eyebrowRef    = useRef<HTMLParagraphElement>(null)
+  const taglineRef    = useRef<HTMLParagraphElement>(null)
+  const socialsRef    = useRef<HTMLDivElement>(null)
+  const staticNameRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // ── Client-nav back: loader already ran once this session ──────────────
+    // window.__rpLoaderDone is set by Loader.tsx after the fly animation
+    // completes. On client-side navigation back to /, the Loader never mounts
+    // again, so rp:loader-done never fires. Detect this case and reveal
+    // everything immediately without waiting for the event.
+    if (window.__rpLoaderDone) {
+      if (staticNameRef.current) staticNameRef.current.style.opacity = '1'
+      gsap.fromTo(
+        [eyebrowRef.current, taglineRef.current, socialsRef.current],
+        { opacity: 0 },
+        { opacity: 1, duration: 0.5, ease: 'power2.out', stagger: 0.06, clearProps: 'opacity' },
+      )
+      setHeroReady(true)
+      return
+    }
+
+    // ── Normal first load: wait for Loader to complete ─────────────────────
     const revealHandler = () => {
       setHeroReady(true)
 
-      const els = [
-        eyebrowRef.current,
-        taglineRef.current,
-        socialsRef.current,
-      ]
+      // Reveal static name — fly elements are positioned directly on top at
+      // this moment (reparented into [data-hero-section], same coordinates).
+      // No double-name visible. Static name persists after fly elements unmount.
+      if (staticNameRef.current) staticNameRef.current.style.opacity = '1'
 
       gsap.fromTo(
-        els,
+        [eyebrowRef.current, taglineRef.current, socialsRef.current],
         { opacity: 0 },
-        { opacity: 1, duration: 0.18, ease: 'power4.out', stagger: 0.05, clearProps: 'opacity' }
+        { opacity: 1, duration: 0.18, ease: 'power4.out', stagger: 0.05, clearProps: 'opacity' },
       )
     }
 
@@ -80,17 +97,34 @@ export default function Hero() {
 
       <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10">
 
-        {/* RON ASHTON layout placeholder — permanently invisible.
-            Provides font-metric height so tagline/socials are positioned
-            correctly while the travelling fly elements are the visible name. */}
-        <div
-          data-hero-slot
-          aria-hidden="true"
-          className="font-[var(--font-cinzel)] font-black leading-[0.9]"
-          style={{ fontSize:'clamp(3rem,13.5vw,17rem)', opacity: 0 }}
-        >
-          <span className="block text-[var(--cream)]">RON</span>
-          <span className="block gold-shimmer">ASHTON</span>
+        {/* Slot wrapper — relative so static name can overlay it absolutely */}
+        <div className="relative">
+          {/* RON ASHTON layout placeholder — permanently invisible.
+              Provides font-metric height so tagline/socials are positioned
+              correctly while the travelling fly elements are the visible name. */}
+          <div
+            data-hero-slot
+            aria-hidden="true"
+            className="font-[var(--font-cinzel)] font-black leading-[0.9]"
+            style={{ fontSize:'clamp(3rem,13.5vw,17rem)', opacity: 0 }}
+          >
+            <span className="block text-[var(--cream)]">RON</span>
+            <span className="block gold-shimmer">ASHTON</span>
+          </div>
+
+          {/* Static name — not in flow (absolute), same font metrics as slot.
+              opacity:0 on mount. During initial load: fly elements sit on top,
+              so revealing this is seamless when they land. On client-nav back:
+              revealed immediately since there are no fly elements to cover it. */}
+          <div
+            ref={staticNameRef}
+            aria-hidden="false"
+            className="absolute inset-0 font-[var(--font-cinzel)] font-black leading-[0.9] pointer-events-none"
+            style={{ fontSize:'clamp(3rem,13.5vw,17rem)', opacity: 0 }}
+          >
+            <span className="block text-[var(--cream)]">RON</span>
+            <span className="block gold-shimmer">ASHTON</span>
+          </div>
         </div>
 
         <p
