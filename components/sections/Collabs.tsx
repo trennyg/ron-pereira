@@ -42,6 +42,7 @@ export default function Collabs() {
     const totalW = () => inner.scrollWidth / 2
 
     function applyPos() {
+      if (!inner) return
       if (Math.abs(pos) >= totalW()) pos = 0
       inner.style.transform = `translateX(${-pos}px)`
     }
