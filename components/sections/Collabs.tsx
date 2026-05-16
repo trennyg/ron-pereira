@@ -27,11 +27,11 @@ export default function Collabs() {
     const inner = innerRef.current
     if (!outer || !inner) return
 
-    let pos = 0
-    let vel = 0
-    let paused = false
+    let pos      = 0
+    let vel      = 0
+    let paused   = false
     let isDragging = false
-    let lastX = 0
+    let lastX    = 0
     let lastTime = 0
     let raf: number
 
@@ -39,11 +39,13 @@ export default function Collabs() {
     const FRICTION  = 0.92
     const MIN_VEL   = 0.3
 
+    // Modulo wrap — never jumps, always seamless
     const totalW = () => inner.scrollWidth / 2
 
     function applyPos() {
       if (!inner) return
-      if (Math.abs(pos) >= totalW()) pos = 0
+      const w = totalW()
+      if (w > 0) pos = ((pos % w) + w) % w   // always-positive modulo, no jump
       inner.style.transform = `translateX(${-pos}px)`
     }
 
@@ -71,37 +73,37 @@ export default function Collabs() {
 
     const onDown = (e: PointerEvent) => {
       isDragging = true
-      paused = true
-      vel = 0
-      lastX = e.clientX
-      lastTime = performance.now()
-      outer.setPointerCapture(e.pointerId)
+      paused     = false
+      vel        = 0
+      lastX      = e.clientX
+      lastTime   = performance.now()
       outer.style.cursor = 'grabbing'
-      e.preventDefault()
+      // NO setPointerCapture — causes pointercancel on Android
     }
 
     const onMove = (e: PointerEvent) => {
       if (!isDragging) return
       const now = performance.now()
-      const dt  = now - lastTime || 1
+      const dt  = Math.max(now - lastTime, 1)
       const dx  = lastX - e.clientX
-      vel = dx / dt * 16
-      pos += dx
+      vel       = (dx / dt) * 16        // px per frame at 60 fps
+      pos      += dx
       applyPos()
-      lastX = e.clientX
+      lastX    = e.clientX
       lastTime = now
-      e.preventDefault()
     }
 
     const onUp = () => {
       if (!isDragging) return
       isDragging = false
-      paused = false
+      paused     = false
       outer.style.cursor = 'grab'
+      // vel retains its last value — momentum continues in tick()
     }
 
-    outer.addEventListener('pointerdown',   onDown,  { passive: false })
-    outer.addEventListener('pointermove',   onMove,  { passive: false })
+    // pointer events for desktop + mobile
+    outer.addEventListener('pointerdown',   onDown)
+    outer.addEventListener('pointermove',   onMove)
     outer.addEventListener('pointerup',     onUp)
     outer.addEventListener('pointercancel', onUp)
 
@@ -134,7 +136,7 @@ export default function Collabs() {
       </div>
 
       {/* Auto-scrolling horizontal track — translateX on GPU compositor, no scrollLeft */}
-      <div ref={trackRef} className="overflow-hidden select-none pb-2" style={{ cursor:'grab' }}>
+      <div ref={trackRef} className="overflow-hidden select-none pb-2" style={{ cursor:'grab', touchAction:'none' }}>
         <div ref={innerRef} style={{ display:'flex', gap:'16px', width:'max-content', willChange:'transform', transform:'translateZ(0)' }}>
           {doubled.map((c, i) => (
             <div
