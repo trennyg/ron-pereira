@@ -5,14 +5,14 @@ import { motion, useScroll, useSpring } from 'framer-motion'
 import { ScrollReveal, AnimHeadingLine } from '@/components/ui/Reveal'
 
 const COLLABS = [
-  { id:'a', name:'Artist Name A', role:'Vocalist · Collaborator',    event:'Event Name · 2024' },
-  { id:'b', name:'Artist Name B', role:'Composer · Producer',        event:'Event Name · 2023' },
-  { id:'c', name:'Artist Name C', role:'Guitarist · Session Artist', event:'Event Name · 2024' },
-  { id:'d', name:'Artist Name D', role:'Saxophonist · Jazz Artist',  event:'Event Name · 2023' },
-  { id:'e', name:'Artist Name E', role:'Vocalist · Film Artist',     event:'Event Name · 2024' },
-  { id:'f', name:'Artist Name F', role:'Keys · Arranger',            event:'Event Name · 2024' },
-  { id:'g', name:'Artist Name G', role:'Drummer · Percussionist',    event:'Event Name · 2023' },
-  { id:'h', name:'Artist Name H', role:'Bassist · Producer',         event:'Event Name · 2024' },
+  { id:'a', name:'Artist Name A', role:'Vocalist · Collaborator',    event:'Event Name · 2024', icon:'🎵' },
+  { id:'b', name:'Artist Name B', role:'Composer · Producer',        event:'Event Name · 2023', icon:'🎶' },
+  { id:'c', name:'Artist Name C', role:'Guitarist · Session Artist', event:'Event Name · 2024', icon:'🎸' },
+  { id:'d', name:'Artist Name D', role:'Saxophonist · Jazz Artist',  event:'Event Name · 2023', icon:'🎷' },
+  { id:'e', name:'Artist Name E', role:'Vocalist · Film Artist',     event:'Event Name · 2024', icon:'🎤' },
+  { id:'f', name:'Artist Name F', role:'Keys · Arranger',            event:'Event Name · 2024', icon:'🎹' },
+  { id:'g', name:'Artist Name G', role:'Drummer · Percussionist',    event:'Event Name · 2023', icon:'🥁' },
+  { id:'h', name:'Artist Name H', role:'Bassist · Producer',         event:'Event Name · 2024', icon:'🎼' },
 ]
 
 export default function Collabs() {
@@ -32,6 +32,9 @@ export default function Collabs() {
     const SPEED = 0.6 // px per frame
 
     // Duplicate cards for seamless loop
+    const cards = track.querySelectorAll('.collab-card-item')
+    const clone  = track.cloneNode(true) as HTMLDivElement
+    // We'll just use scrollLeft wrap-around approach
     const totalW = () => track.scrollWidth / 2
 
     // Pause on any interaction
@@ -94,53 +97,122 @@ export default function Collabs() {
         {doubled.map((c, i) => (
           <div
             key={`${c.id}-${i}`}
-            className="collab-card-item flex-shrink-0 w-[280px] relative group cursor-pointer flex flex-col bg-[rgba(10,7,4,0.9)]"
-            style={{ aspectRatio: '1' }}
+            className="collab-card-item flex-shrink-0 w-[280px] relative group cursor-pointer"
+            style={{ aspectRatio: '1', background: '#0A0A0C' }}
           >
-            {/* Image zone — top 65% */}
-            <div
-              className="relative flex-none overflow-hidden border border-[rgba(201,168,76,0.12)]"
-              style={{ height: '65%' }}
-            >
-              {/* Placeholder background + glyph — swap this div for <Image fill object-cover> when ready */}
-              <div className="absolute inset-0 bg-[rgba(201,168,76,0.04)] flex items-center justify-center">
-                <span style={{ color: 'var(--gold)', opacity: 0.18, fontSize: '2rem' }}>✦</span>
+
+            {/* ── Image zone — top 68%, margin:10px for filigree breathing room ── */}
+            {/* overflow:visible lets diamond studs and bracket lines extend outside */}
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              left: '10px',
+              right: '10px',
+              height: 'calc(68% - 10px)',
+              overflow: 'visible',
+              background: 'rgba(201,168,76,0.025)',
+              border: '2px solid #C9A84C',
+              boxShadow: '0 0 0 5px rgba(201,168,76,0.06)',
+            }}>
+
+              {/* Placeholder glyph — replace this div with <Image fill objectFit="cover"> when ready */}
+              <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <span style={{ fontSize:'1.6rem', color:'rgba(201,168,76,0.13)' }}>✦</span>
               </div>
 
-              {/* Corner bracket — top-left */}
-              <div className="absolute top-0 left-0 pointer-events-none">
-                <div className="absolute top-0 left-0 w-5 h-px bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:w-7 transition-all duration-300" />
-                <div className="absolute top-0 left-0 w-px h-5 bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:h-7 transition-all duration-300" />
-              </div>
-              {/* Corner bracket — top-right */}
-              <div className="absolute top-0 right-0 pointer-events-none">
-                <div className="absolute top-0 right-0 w-5 h-px bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:w-7 transition-all duration-300" />
-                <div className="absolute top-0 right-0 w-px h-5 bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:h-7 transition-all duration-300" />
-              </div>
-              {/* Corner bracket — bottom-left */}
-              <div className="absolute bottom-0 left-0 pointer-events-none">
-                <div className="absolute bottom-0 left-0 w-5 h-px bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:w-7 transition-all duration-300" />
-                <div className="absolute bottom-0 left-0 w-px h-5 bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:h-7 transition-all duration-300" />
-              </div>
-              {/* Corner bracket — bottom-right */}
-              <div className="absolute bottom-0 right-0 pointer-events-none">
-                <div className="absolute bottom-0 right-0 w-5 h-px bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:w-7 transition-all duration-300" />
-                <div className="absolute bottom-0 right-0 w-px h-5 bg-[var(--gold)] opacity-60 group-hover:opacity-100 group-hover:h-7 transition-all duration-300" />
+              {/* Hover overlay — placed before filigree so filigree renders on top via DOM order */}
+              <div
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(8,5,2,0.82)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '12px',
+                  textAlign: 'center',
+                }}
+              >
+                <span className="font-[var(--font-cinzel)] font-bold gold-shimmer" style={{ fontSize:'1rem' }}>{c.name}</span>
+                <span className="font-[var(--font-mono)]" style={{ fontSize:'0.4rem', letterSpacing:'0.28em', color:'rgba(240,237,232,0.55)' }}>{c.role}</span>
+                <span className="font-[var(--font-cormorant)]" style={{ fontSize:'0.85rem', fontStyle:'italic', color:'rgba(240,237,232,0.3)', marginTop:'6px' }}>{c.event}</span>
               </div>
 
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-[rgba(8,5,2,0.72)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 p-4 text-center">
-                <span className="font-[var(--font-cinzel)] font-bold text-[0.95rem] gold-shimmer">{c.name}</span>
-                <span className="font-[var(--font-mono)] text-[0.38rem] tracking-widest text-[var(--cream-dim)]">{c.role}</span>
-                <span className="font-[var(--font-cormorant)] text-[0.82rem] italic text-[var(--cream-ghost)] mt-1">{c.event}</span>
-              </div>
+              {/* ─── Filigree frame — all inline styles ─── */}
+
+              {/* Corner diamond studs — 4 total, 8×8px rotated 45° */}
+              <div style={{ position:'absolute', width:8, height:8, background:'#C9A84C', transform:'rotate(45deg)', top:-5,    left:-5   }} />
+              <div style={{ position:'absolute', width:8, height:8, background:'#C9A84C', transform:'rotate(45deg)', top:-5,    right:-5  }} />
+              <div style={{ position:'absolute', width:8, height:8, background:'#C9A84C', transform:'rotate(45deg)', bottom:-5, left:-5   }} />
+              <div style={{ position:'absolute', width:8, height:8, background:'#C9A84C', transform:'rotate(45deg)', bottom:-5, right:-5  }} />
+
+              {/* Corner bracket lines — 8 total (1H + 1V per corner), 1px × 16px */}
+              {/* Top-left */}
+              <div style={{ position:'absolute', top:-7,    left:0,   width:16, height:1,  background:'#C9A84C' }} />
+              <div style={{ position:'absolute', left:-7,   top:0,    width:1,  height:16, background:'#C9A84C' }} />
+              {/* Top-right */}
+              <div style={{ position:'absolute', top:-7,    right:0,  width:16, height:1,  background:'#C9A84C' }} />
+              <div style={{ position:'absolute', right:-7,  top:0,    width:1,  height:16, background:'#C9A84C' }} />
+              {/* Bottom-left */}
+              <div style={{ position:'absolute', bottom:-7, left:0,   width:16, height:1,  background:'#C9A84C' }} />
+              <div style={{ position:'absolute', left:-7,   bottom:0, width:1,  height:16, background:'#C9A84C' }} />
+              {/* Bottom-right */}
+              <div style={{ position:'absolute', bottom:-7, right:0,  width:16, height:1,  background:'#C9A84C' }} />
+              <div style={{ position:'absolute', right:-7,  bottom:0, width:1,  height:16, background:'#C9A84C' }} />
+
+              {/* Mid-side diamonds — 4 total, 5×5px rotated 45° */}
+              <div style={{ position:'absolute', width:5, height:5, background:'#C9A84C', transform:'rotate(45deg)', top:-4,    left:'50%', marginLeft:-2.5 }} />
+              <div style={{ position:'absolute', width:5, height:5, background:'#C9A84C', transform:'rotate(45deg)', bottom:-4, left:'50%', marginLeft:-2.5 }} />
+              <div style={{ position:'absolute', width:5, height:5, background:'#C9A84C', transform:'rotate(45deg)', left:-4,   top:'50%',  marginTop:-2.5  }} />
+              <div style={{ position:'absolute', width:5, height:5, background:'#C9A84C', transform:'rotate(45deg)', right:-4,  top:'50%',  marginTop:-2.5  }} />
+
+              {/* Flanking dashes — 8 total, 1px × 18px, rgba(201,168,76,0.45) */}
+              {/* Top side */}
+              <div style={{ position:'absolute', top:-7,    left:22,   width:18, height:1,  background:'rgba(201,168,76,0.45)' }} />
+              <div style={{ position:'absolute', top:-7,    right:22,  width:18, height:1,  background:'rgba(201,168,76,0.45)' }} />
+              {/* Bottom side */}
+              <div style={{ position:'absolute', bottom:-7, left:22,   width:18, height:1,  background:'rgba(201,168,76,0.45)' }} />
+              <div style={{ position:'absolute', bottom:-7, right:22,  width:18, height:1,  background:'rgba(201,168,76,0.45)' }} />
+              {/* Left side */}
+              <div style={{ position:'absolute', left:-7,   top:20,    width:1,  height:18, background:'rgba(201,168,76,0.45)' }} />
+              <div style={{ position:'absolute', left:-7,   bottom:20, width:1,  height:18, background:'rgba(201,168,76,0.45)' }} />
+              {/* Right side */}
+              <div style={{ position:'absolute', right:-7,  top:20,    width:1,  height:18, background:'rgba(201,168,76,0.45)' }} />
+              <div style={{ position:'absolute', right:-7,  bottom:20, width:1,  height:18, background:'rgba(201,168,76,0.45)' }} />
+
             </div>
 
-            {/* Name + role strip — bottom 35% */}
-            <div className="flex-1 flex flex-col items-center justify-center px-3 gap-1">
-              <span className="font-[var(--font-cinzel)] text-[0.82rem] font-bold text-center leading-tight">{c.name}</span>
-              <span className="font-[var(--font-mono)] text-[0.38rem] tracking-widest text-[var(--cream-dim)] text-center">{c.role}</span>
+            {/* ── Name + role strip — bottom 32% ── */}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '32%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              padding: '0 12px',
+            }}>
+              <span
+                className="font-[var(--font-cinzel)]"
+                style={{ fontSize:'0.82rem', fontWeight:700, color:'#F0EDE8', textAlign:'center', lineHeight:1.2 }}
+              >
+                {c.name}
+              </span>
+              <span
+                className="font-[var(--font-mono)]"
+                style={{ fontSize:'0.38rem', letterSpacing:'0.22em', color:'rgba(240,237,232,0.45)', textAlign:'center' }}
+              >
+                {c.role.split(' · ')[0]}
+              </span>
             </div>
+
           </div>
         ))}
       </div>
