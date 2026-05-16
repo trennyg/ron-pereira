@@ -152,12 +152,17 @@ components/sections/Booking.tsx    ← WhatsApp enquiry flow. Controlled inputs.
 **Always render** the name div. Use `opacity: 0` only.
 **Never** conditionally mount/unmount it with `{condition && (...)}`.
 
+### Mobile vertical alignment
+On max-width: 640px, the hero content wrapper is vertically centred within the viewport (not top-aligned). Desktop layout is unchanged. This is intentional — do not revert.
+
 ---
 
 ## SITE STRUCTURE
 
 7 service pages as **separate Next.js pages** (real URLs, not modals).
 Booking form pre-selects the service based on which page the user came from.
+
+**StatsBar mobile note:** On iPhone mini (375px), the 2×2 stats grid label spacing is adjusted via a mobile-only breakpoint to prevent "COLLABORATIONS" and "AWARDS & RECOGNITION" from visually colliding. Desktop unchanged.
 
 ---
 
