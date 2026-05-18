@@ -19,23 +19,8 @@ export default function Hero() {
   const eyebrowRef    = useRef<HTMLParagraphElement>(null)
   const taglineRef    = useRef<HTMLParagraphElement>(null)
   const socialsRef    = useRef<HTMLDivElement>(null)
-  const staticNameRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // ── PATH 2: client-nav back ────────────────────────────────────────────
-    // Loader never mounts again; rp:loader-done / hero:ready never fire.
-    // Reveal static name + hero content immediately.
-    if (window.__rpLoaderDone) {
-      if (staticNameRef.current) staticNameRef.current.style.opacity = '1'
-      gsap.fromTo(
-        [eyebrowRef.current, taglineRef.current, socialsRef.current],
-        { opacity: 0 },
-        { opacity: 1, duration: 0.5, ease: 'power2.out', stagger: 0.06, clearProps: 'opacity' },
-      )
-      setHeroReady(true)
-      return
-    }
-
     // ── PATH 1: normal first load ──────────────────────────────────────────
     // Both listeners registered at effect level — no nesting, no ordering
     // dependency between them.  Static name stays opacity:0 the entire fly
@@ -55,7 +40,6 @@ export default function Hero() {
     }
 
     const onHeroReady = () => {
-      if (staticNameRef.current) staticNameRef.current.style.opacity = '1'
       setHeroReady(true)
     }
 
@@ -104,8 +88,6 @@ export default function Hero() {
 
       <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10">
 
-        {/* Slot wrapper — relative so static name can be absolute-positioned over it */}
-        <div className="relative">
           {/* RON ASHTON layout placeholder — permanently invisible.
               Provides font-metric height so the content below is positioned
               correctly. Fly elements (created by Loader) are the visible name. */}
@@ -118,20 +100,6 @@ export default function Hero() {
             <span className="block text-[var(--cream)]">RON</span>
             <span className="block gold-shimmer">ASHTON</span>
           </div>
-
-          {/* Static name — absolute, not in flow, identical font metrics to slot.
-              Hard opacity:0 in JSX. Never touched during fly animation.
-              Revealed only via the two explicit code paths in useEffect above. */}
-          <div
-            ref={staticNameRef}
-            aria-hidden="false"
-            className="absolute inset-0 font-[var(--font-cinzel)] font-black leading-[0.9] pointer-events-none"
-            style={{ fontSize:'clamp(3rem,13.5vw,17rem)', opacity: 0 }}
-          >
-            <span className="block text-[var(--cream)]">RON</span>
-            <span className="block gold-shimmer">ASHTON</span>
-          </div>
-        </div>
 
         <p
           ref={eyebrowRef}

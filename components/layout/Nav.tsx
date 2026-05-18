@@ -33,20 +33,21 @@ export default function Nav() {
       >
 
         {/* Logo — "RON ASHTON" cream, "MUSIC" gold shimmer */}
-        <Link
+        <a
           href="/"
           className="font-[var(--font-cinzel)] font-black flex-shrink-0"
           style={{
             zIndex: 810,
             fontSize: '0.88rem',
             letterSpacing: '0.12em',
+            textDecoration: 'none',
             ...(isServicePage && { position: 'absolute', left: '50%', transform: 'translateX(-50%)' }),
           }}
         >
           <span style={{ color: 'var(--cream)' }}>RON</span>
           <span style={{ color: 'var(--cream)' }}> ASHTON</span>
           <span className="gold-shimmer"> MUSIC</span>
-        </Link>
+        </a>
 
         {/* Desktop links — Collabs → Services → Book — hidden on service pages */}
         {!isServicePage && (

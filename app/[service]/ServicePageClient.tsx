@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Service, SERVICES } from '@/lib/services'
 import Nav from '@/components/layout/Nav'
@@ -99,10 +98,10 @@ function ServiceHero({ svc }: { svc: Service }) {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <Link href="/#services" className="back-btn" data-cursor-hover>
+          <a href="/#services" className="back-btn" data-cursor-hover>
             <span>←</span>
             <span>All Services</span>
-          </Link>
+          </a>
         </motion.div>
 
         {/* Icon */}
