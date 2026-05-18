@@ -249,6 +249,13 @@ export default function Loader({ onComplete }: LoaderProps) {
                 window.dispatchEvent(new CustomEvent('hero:ready'))
                 window.__rpLoaderDone = true
                 onComplete()
+                const hash = window.location.hash
+                if (hash) {
+                  setTimeout(() => {
+                    const el = document.querySelector(hash)
+                    if (el) el.scrollIntoView({ behavior: 'smooth' })
+                  }, 400)
+                }
               }, 1100)
             },
           })

@@ -106,10 +106,10 @@ export default function Nav() {
 
             {/* Collabs */}
             <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{delay:0}}>
-              <Link href="/#collabs" onClick={() => setMenuOpen(false)}
+              <a href="/#collabs" onClick={() => setMenuOpen(false)}
                 className="font-[var(--font-cinzel)] text-[clamp(1.8rem,7vw,3rem)] font-bold tracking-[0.2em] text-[var(--cream-dim)] hover:text-[var(--gold)] transition-colors uppercase block py-3 text-center">
                 Collabs
-              </Link>
+              </a>
             </motion.div>
 
             {/* Services accordion */}
@@ -139,10 +139,10 @@ export default function Nav() {
 
             {/* Book */}
             <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{delay:0.12}}>
-              <Link href="/#booking" onClick={() => setMenuOpen(false)}
+              <a href="/#booking" onClick={() => setMenuOpen(false)}
                 className="font-[var(--font-cinzel)] text-[clamp(1.8rem,7vw,3rem)] font-bold tracking-[0.2em] text-[var(--cream-dim)] hover:text-[var(--gold)] transition-colors uppercase block py-3 text-center">
                 Book
-              </Link>
+              </a>
             </motion.div>
 
             {/* EQ */}
