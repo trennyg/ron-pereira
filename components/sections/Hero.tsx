@@ -22,11 +22,9 @@ export default function Hero() {
   const staticNameRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // ── Client-nav back: loader already ran once this session ──────────────
-    // window.__rpLoaderDone is set by Loader.tsx after the fly animation
-    // completes. On client-side navigation back to /, the Loader never mounts
-    // again, so rp:loader-done never fires. Detect this case and reveal
-    // everything immediately without waiting for the event.
+    // ── PATH 2: client-nav back ────────────────────────────────────────────
+    // Loader never mounts again; rp:loader-done / hero:ready never fire.
+    // Reveal static name + hero content immediately.
     if (window.__rpLoaderDone) {
       if (staticNameRef.current) staticNameRef.current.style.opacity = '1'
       gsap.fromTo(
@@ -38,15 +36,17 @@ export default function Hero() {
       return
     }
 
-    // ── Normal first load: wait for Loader to complete ─────────────────────
-    const revealHandler = () => {
-      setHeroReady(true)
+    // ── PATH 1: normal first load ──────────────────────────────────────────
+    // Both listeners registered at effect level — no nesting, no ordering
+    // dependency between them.  Static name stays opacity:0 the entire fly
+    // animation; only hero:ready reveals it.  At that point the fly elements
+    // (z-index 10000, direct children of the hero section) sit on top of the
+    // static name (inside the z-10 inner div), so the handoff is seamless.
+    // setHeroReady runs inside onHeroReady so the React re-render happens
+    // after opacity:1 is already written — no chance for a render cycle to
+    // interleave between the two.
 
-      // Reveal static name — fly elements are positioned directly on top at
-      // this moment (reparented into [data-hero-section], same coordinates).
-      // No double-name visible. Static name persists after fly elements unmount.
-      if (staticNameRef.current) staticNameRef.current.style.opacity = '1'
-
+    const onLoaderDone = () => {
       gsap.fromTo(
         [eyebrowRef.current, taglineRef.current, socialsRef.current],
         { opacity: 0 },
@@ -54,10 +54,17 @@ export default function Hero() {
       )
     }
 
-    window.addEventListener('rp:loader-done', revealHandler)
+    const onHeroReady = () => {
+      if (staticNameRef.current) staticNameRef.current.style.opacity = '1'
+      setHeroReady(true)
+    }
+
+    window.addEventListener('rp:loader-done', onLoaderDone, { once: true })
+    window.addEventListener('hero:ready',     onHeroReady,  { once: true })
 
     return () => {
-      window.removeEventListener('rp:loader-done', revealHandler)
+      window.removeEventListener('rp:loader-done', onLoaderDone)
+      window.removeEventListener('hero:ready',     onHeroReady)
       gsap.killTweensOf([eyebrowRef.current, taglineRef.current, socialsRef.current])
     }
   }, [])
@@ -97,11 +104,11 @@ export default function Hero() {
 
       <div className="relative z-10 px-16 pb-20 max-md:px-6 max-md:pb-12 max-sm:px-4 max-sm:pb-10">
 
-        {/* Slot wrapper — relative so static name can overlay it absolutely */}
+        {/* Slot wrapper — relative so static name can be absolute-positioned over it */}
         <div className="relative">
           {/* RON ASHTON layout placeholder — permanently invisible.
-              Provides font-metric height so tagline/socials are positioned
-              correctly while the travelling fly elements are the visible name. */}
+              Provides font-metric height so the content below is positioned
+              correctly. Fly elements (created by Loader) are the visible name. */}
           <div
             data-hero-slot
             aria-hidden="true"
@@ -112,10 +119,9 @@ export default function Hero() {
             <span className="block gold-shimmer">ASHTON</span>
           </div>
 
-          {/* Static name — not in flow (absolute), same font metrics as slot.
-              opacity:0 on mount. During initial load: fly elements sit on top,
-              so revealing this is seamless when they land. On client-nav back:
-              revealed immediately since there are no fly elements to cover it. */}
+          {/* Static name — absolute, not in flow, identical font metrics to slot.
+              Hard opacity:0 in JSX. Never touched during fly animation.
+              Revealed only via the two explicit code paths in useEffect above. */}
           <div
             ref={staticNameRef}
             aria-hidden="false"
